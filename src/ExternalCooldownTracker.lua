@@ -181,7 +181,13 @@ end
 local function CreateCooldownTrackerFrame(parentFrame, db)
     cooldownFrame = CreateFrame("Frame", "RooMonkCooldownFrame", UIParent)
     cooldownFrame:SetSize(200, 300)
-    cooldownFrame:SetPoint("TOPLEFT", parentFrame, "TOPRIGHT", 10, 0)
+
+    -- Restore saved position or use default position relative to parent
+    if db.cooldownX and db.cooldownY then
+        cooldownFrame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", db.cooldownX, db.cooldownY)
+    else
+        cooldownFrame:SetPoint("TOPLEFT", parentFrame, "TOPRIGHT", 10, 0)
+    end
 
     -- Make it movable
     cooldownFrame:EnableMouse(true)
@@ -197,6 +203,9 @@ local function CreateCooldownTrackerFrame(parentFrame, db)
 
     cooldownFrame:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
+        local point, _, _, x, y = self:GetPoint()
+        db.cooldownX = x
+        db.cooldownY = y
     end)
 
     -- Background

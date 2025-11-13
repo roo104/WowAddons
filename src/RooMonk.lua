@@ -22,7 +22,9 @@ RooMonkCharDB = RooMonkCharDB or {
     showStatue = true,
     showCooldowns = true,
     x = 100,
-    y = -100
+    y = -100,
+    cooldownX = nil,
+    cooldownY = nil
 }
 
 -- Initialize the main frame
