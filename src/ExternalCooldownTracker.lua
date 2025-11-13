@@ -45,7 +45,7 @@ end
 -- Frame variables
 local cooldownFrame = nil
 local cooldownBars = {}
-local activeCooldowns = {}
+local activeCooldowns = nil  -- Will be set to db.activeCooldowns
 local combatLogFrame = nil
 
 -- Handle combat log events for cast-based tracking (like Revival)
@@ -179,6 +179,10 @@ end
 
 -- Create the main cooldown tracker frame
 local function CreateCooldownTrackerFrame(parentFrame, db)
+    -- Initialize activeCooldowns from saved data
+    activeCooldowns = db.activeCooldowns or {}
+    db.activeCooldowns = activeCooldowns
+
     cooldownFrame = CreateFrame("Frame", "RooMonkCooldownFrame", UIParent)
     cooldownFrame:SetSize(200, 300)
 
