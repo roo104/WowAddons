@@ -3,7 +3,7 @@
 ## Notes: Tracks Renewing Mist on party and raid members for Mistweaver Monks
 ## Author: Jonas
 ## Version: 1.0.0
-## SavedVariables: RooMonkDB
+## SavedVariablesPerCharacter: RooMonkCharDB
 
 RenewingMistTracker.lua
 JadeSerpentTracker.lua

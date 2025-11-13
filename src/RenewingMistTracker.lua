@@ -3,6 +3,10 @@
 
 ---@diagnostic disable: undefined-global
 
+-- Only load for Mistweaver monks
+local _, class = UnitClass("player")
+if class ~= "MONK" then return end
+
 local RENEWING_MIST_SPELL_ID = 119611 -- Renewing Mist spell ID for MoP
 local UPLIFT_SPELL_ID = 116670 -- Uplift spell ID for MoP
 
@@ -106,7 +110,7 @@ local function CreateListFrame(parentFrame, db)
         listFrame.fontStrings[i] = fs
     end
 
-    if db.showList then
+    if db.showRenewingMist then
         listFrame:Show()
     else
         listFrame:Hide()
@@ -202,7 +206,7 @@ local function UpdateDisplay(db)
     end
 
     -- Update list
-    if listFrame and listFrame.fontStrings and db.showList then
+    if listFrame and listFrame.fontStrings and db.showRenewingMist then
         for i = 1, 10 do
             if listFrame.fontStrings[i] then
                 if targets[i] then

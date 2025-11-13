@@ -15,10 +15,10 @@ local cooldownFrame = nil
 local updateTimer = 0
 local UPDATE_INTERVAL = 0.25 -- Update every 0.25 seconds
 
--- Saved variables
-RooMonkDB = RooMonkDB or {
+-- Saved variables (per-character)
+RooMonkCharDB = RooMonkCharDB or {
     locked = false,
-    showList = true,
+    showRenewingMist = true,
     showStatue = true,
     showCooldowns = true,
     x = 100,
@@ -27,7 +27,7 @@ RooMonkDB = RooMonkDB or {
 
 -- Initialize the main frame
 local function InitializeFrame()
-    frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", RooMonkDB.x, RooMonkDB.y)
+    frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", RooMonkCharDB.x, RooMonkCharDB.y)
 
     frame:EnableMouse(true)
     frame:SetMovable(true)
@@ -36,7 +36,7 @@ local function InitializeFrame()
 
     -- Drag handlers
     frame:SetScript("OnDragStart", function(self)
-        if not RooMonkDB.locked then
+        if not RooMonkCharDB.locked then
             self:StartMoving()
         end
     end)
@@ -44,24 +44,24 @@ local function InitializeFrame()
     frame:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
         local point, _, _, x, y = self:GetPoint()
-        RooMonkDB.x = x
-        RooMonkDB.y = y
+        RooMonkCharDB.x = x
+        RooMonkCharDB.y = y
     end)
 
     -- Create Renewing Mist tracking frame using external module
     if RooMonk_RenewingMistTracker then
-        renewingMistFrame = RooMonk_RenewingMistTracker.CreateRenewingMistFrame(frame, RooMonkDB)
+        renewingMistFrame = RooMonk_RenewingMistTracker.CreateRenewingMistFrame(frame, RooMonkCharDB)
         listFrame = RooMonk_RenewingMistTracker.GetListFrame()
     end
 
     -- Create statue frame using external module
     if RooMonk_JadeSerpentTracker then
-        statueFrame = RooMonk_JadeSerpentTracker.CreateStatueFrame(frame, RooMonkDB)
+        statueFrame = RooMonk_JadeSerpentTracker.CreateStatueFrame(frame, RooMonkCharDB)
     end
 
     -- Create cooldown tracker frame using external module
     if RooMonk_ExternalCooldownTracker then
-        cooldownFrame = RooMonk_ExternalCooldownTracker.CreateCooldownTrackerFrame(frame, RooMonkDB)
+        cooldownFrame = RooMonk_ExternalCooldownTracker.CreateCooldownTrackerFrame(frame, RooMonkCharDB)
     end
 end
 
@@ -69,17 +69,17 @@ end
 local function UpdateDisplay()
     -- Update Renewing Mist display using external module
     if RooMonk_RenewingMistTracker then
-        RooMonk_RenewingMistTracker.UpdateDisplay(RooMonkDB)
+        RooMonk_RenewingMistTracker.UpdateDisplay(RooMonkCharDB)
     end
 
     -- Update statue display using external module
     if RooMonk_JadeSerpentTracker then
-        RooMonk_JadeSerpentTracker.UpdateStatueDisplay(RooMonkDB)
+        RooMonk_JadeSerpentTracker.UpdateStatueDisplay(RooMonkCharDB)
     end
 
     -- Update cooldown tracker using external module
     if RooMonk_ExternalCooldownTracker then
-        RooMonk_ExternalCooldownTracker.UpdateCooldownDisplay(RooMonkDB)
+        RooMonk_ExternalCooldownTracker.UpdateCooldownDisplay(RooMonkCharDB)
     end
 end
 
@@ -117,23 +117,25 @@ SlashCmdList["ROOMONK"] = function(msg)
     msg = string.lower(msg or "")
 
     if msg == "lock" then
-        RooMonkDB.locked = true
+        RooMonkCharDB.locked = true
         print("|cff00ff80RooMonk:|r Frame locked")
     elseif msg == "unlock" then
-        RooMonkDB.locked = false
+        RooMonkCharDB.locked = false
         print("|cff00ff80RooMonk:|r Frame unlocked")
-    elseif msg == "list" then
-        RooMonkDB.showList = not RooMonkDB.showList
-        if RooMonkDB.showList then
+    elseif msg == "mist" or msg == "renewing" then
+        RooMonkCharDB.showRenewingMist = not RooMonkCharDB.showRenewingMist
+        if RooMonkCharDB.showRenewingMist then
+            renewingMistFrame:Show()
             listFrame:Show()
-            print("|cff00ff80RooMonk:|r List shown")
+            print("|cff00ff80RooMonk:|r Renewing Mist tracker shown")
         else
+            renewingMistFrame:Hide()
             listFrame:Hide()
-            print("|cff00ff80RooMonk:|r List hidden")
+            print("|cff00ff80RooMonk:|r Renewing Mist tracker hidden")
         end
     elseif msg == "statue" then
-        RooMonkDB.showStatue = not RooMonkDB.showStatue
-        if RooMonkDB.showStatue then
+        RooMonkCharDB.showStatue = not RooMonkCharDB.showStatue
+        if RooMonkCharDB.showStatue then
             statueFrame:Show()
             print("|cff00ff80RooMonk:|r Statue tracker shown")
         else
@@ -141,7 +143,7 @@ SlashCmdList["ROOMONK"] = function(msg)
             print("|cff00ff80RooMonk:|r Statue tracker hidden")
         end
     elseif msg == "cooldowns" or msg == "cds" then
-        RooMonkDB.showCooldowns = not RooMonkDB.showCooldowns
+        RooMonkCharDB.showCooldowns = not RooMonkCharDB.showCooldowns
         if RooMonk_ExternalCooldownTracker then
             local shown = RooMonk_ExternalCooldownTracker.ToggleFrame()
             if shown then
@@ -151,16 +153,16 @@ SlashCmdList["ROOMONK"] = function(msg)
             end
         end
     elseif msg == "reset" then
-        RooMonkDB.x = 100
-        RooMonkDB.y = -100
+        RooMonkCharDB.x = 100
+        RooMonkCharDB.y = -100
         frame:ClearAllPoints()
-        frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", RooMonkDB.x, RooMonkDB.y)
+        frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", RooMonkCharDB.x, RooMonkCharDB.y)
         print("|cff00ff80RooMonk:|r Position reset")
     elseif msg == "help" or msg == "" then
         print("|cff00ff80RooMonk Commands:|r")
         print("  /rm lock - Lock the frame")
         print("  /rm unlock - Unlock the frame")
-        print("  /rm list - Toggle player list")
+        print("  /rm mist (or renewing) - Toggle Renewing Mist tracker")
         print("  /rm statue - Toggle statue tracker")
         print("  /rm cooldowns (or cds) - Toggle cooldown tracker")
         print("  /rm reset - Reset position")
