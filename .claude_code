@@ -1,0 +1,22 @@
+# Claude Code Configuration for RooMonk
+
+## Project Context
+This is a World of Warcraft addon project for **WoW Classic: Mists of Pandaria (MoP)**.
+
+## Version Information
+- Interface Version: **5.4.0** (50400)
+- Game Version: **WoW Classic MoP**
+- Lua Environment: World of Warcraft 5.4 API
+
+## Important Considerations
+- Always use WoW 5.4 API functions and limitations
+- Ensure compatibility with Classic MoP (Interface 50400), NOT retail WoW
+- Use appropriate Classic MoP spell IDs, event names, and API functions
+- Frame and UI elements should follow Classic MoP standards
+- No retail-only APIs (like C_NamePlate, newer C_Timer functions, etc.)
+
+## Coding Standards
+- Follow WoW addon Lua conventions
+- Use proper event handling with RegisterEvent
+- Maintain compatibility with other addons
+- Efficient frame updates and event handling
