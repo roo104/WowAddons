@@ -28,6 +28,7 @@ RooMonkCharDB = RooMonkCharDB or {
 -- Initialize the main frame
 local function InitializeFrame()
     frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", RooMonkCharDB.x, RooMonkCharDB.y)
+    frame:SetSize(1, 1) -- Minimum size to ensure child frames can anchor properly
 
     frame:EnableMouse(true)
     frame:SetMovable(true)
@@ -124,23 +125,31 @@ SlashCmdList["ROOMONK"] = function(msg)
         print("|cff00ff80RooMonk:|r Frame unlocked")
     elseif msg == "mist" or msg == "renewing" then
         RooMonkCharDB.showRenewingMist = not RooMonkCharDB.showRenewingMist
-        if RooMonkCharDB.showRenewingMist then
-            renewingMistFrame:Show()
-            listFrame:Show()
-            print("|cff00ff80RooMonk:|r Renewing Mist tracker shown")
+        if renewingMistFrame and listFrame then
+            if RooMonkCharDB.showRenewingMist then
+                renewingMistFrame:Show()
+                listFrame:Show()
+                print("|cff00ff80RooMonk:|r Renewing Mist tracker shown")
+            else
+                renewingMistFrame:Hide()
+                listFrame:Hide()
+                print("|cff00ff80RooMonk:|r Renewing Mist tracker hidden")
+            end
         else
-            renewingMistFrame:Hide()
-            listFrame:Hide()
-            print("|cff00ff80RooMonk:|r Renewing Mist tracker hidden")
+            print("|cff00ff80RooMonk:|r Renewing Mist tracker not available for this class")
         end
     elseif msg == "statue" then
         RooMonkCharDB.showStatue = not RooMonkCharDB.showStatue
-        if RooMonkCharDB.showStatue then
-            statueFrame:Show()
-            print("|cff00ff80RooMonk:|r Statue tracker shown")
+        if statueFrame then
+            if RooMonkCharDB.showStatue then
+                statueFrame:Show()
+                print("|cff00ff80RooMonk:|r Statue tracker shown")
+            else
+                statueFrame:Hide()
+                print("|cff00ff80RooMonk:|r Statue tracker hidden")
+            end
         else
-            statueFrame:Hide()
-            print("|cff00ff80RooMonk:|r Statue tracker hidden")
+            print("|cff00ff80RooMonk:|r Statue tracker not available for this class")
         end
     elseif msg == "cooldowns" or msg == "cds" then
         RooMonkCharDB.showCooldowns = not RooMonkCharDB.showCooldowns

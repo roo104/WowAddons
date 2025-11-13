@@ -4,33 +4,34 @@
 ---@diagnostic disable: undefined-global
 
 -- Major healing cooldowns to track (MoP spell IDs)
+-- duration = buff/channel duration, cooldownDuration = actual cooldown time
 local TRACKED_COOLDOWNS = {
     -- Druid (Restoration)
-    {spellId = 740, name = "Tranquility", duration = 8, class = "DRUID", trackType = "buff"},
-    {spellId = 106898, name = "Stampeding Roar", duration = 8, class = "DRUID", trackType = "buff"},
-    {spellId = 102342, name = "Ironbark", duration = 12, class = "DRUID", trackType = "buff"},
+    {spellId = 740, name = "Tranquility", duration = 8, cooldownDuration = 180, class = "DRUID", trackType = "cast"},
+    {spellId = 106898, name = "Stampeding Roar", duration = 8, cooldownDuration = 120, class = "DRUID", trackType = "cast"},
+    {spellId = 102342, name = "Ironbark", duration = 12, cooldownDuration = 60, class = "DRUID", trackType = "buff"},
 
     -- Paladin (Holy)
-    {spellId = 31821, name = "Aura Mastery", duration = 6, class = "PALADIN", trackType = "buff"},
-    {spellId = 6940, name = "Hand of Sacrifice", duration = 12, class = "PALADIN", trackType = "buff"},
-    {spellId = 1022, name = "Hand of Protection", duration = 10, class = "PALADIN", trackType = "buff"},
-    {spellId = 1044, name = "Hand of Freedom", duration = 6, class = "PALADIN", trackType = "buff"},
-    {spellId = 31842, name = "Avenging Wrath", duration = 20, class = "PALADIN", trackType = "buff"},
+    {spellId = 31821, name = "Aura Mastery", duration = 6, cooldownDuration = 180, class = "PALADIN", trackType = "buff"},
+    {spellId = 6940, name = "Hand of Sacrifice", duration = 12, cooldownDuration = 120, class = "PALADIN", trackType = "buff"},
+    {spellId = 1022, name = "Hand of Protection", duration = 10, cooldownDuration = 300, class = "PALADIN", trackType = "buff"},
+    {spellId = 1044, name = "Hand of Freedom", duration = 6, cooldownDuration = 25, class = "PALADIN", trackType = "buff"},
+    {spellId = 31842, name = "Avenging Wrath", duration = 20, cooldownDuration = 180, class = "PALADIN", trackType = "buff"},
 
     -- Priest (Holy/Disc)
-    {spellId = 62618, name = "Power Word: Barrier", duration = 10, class = "PRIEST", trackType = "buff"},
-    {spellId = 64843, name = "Divine Hymn", duration = 8, class = "PRIEST", trackType = "buff"},
-    {spellId = 47788, name = "Guardian Spirit", duration = 10, class = "PRIEST", trackType = "buff"},
-    {spellId = 33206, name = "Pain Suppression", duration = 8, class = "PRIEST", trackType = "buff"},
+    {spellId = 62618, name = "Power Word: Barrier", duration = 10, cooldownDuration = 180, class = "PRIEST", trackType = "buff"},
+    {spellId = 64843, name = "Divine Hymn", duration = 8, cooldownDuration = 180, class = "PRIEST", trackType = "cast"},
+    {spellId = 47788, name = "Guardian Spirit", duration = 10, cooldownDuration = 180, class = "PRIEST", trackType = "buff"},
+    {spellId = 33206, name = "Pain Suppression", duration = 8, cooldownDuration = 180, class = "PRIEST", trackType = "buff"},
 
     -- Shaman (Restoration)
-    {spellId = 108280, name = "Healing Tide Totem", duration = 10, class = "SHAMAN", trackType = "buff"},
-    {spellId = 98008, name = "Spirit Link Totem", duration = 6, class = "SHAMAN", trackType = "buff"},
-    {spellId = 16190, name = "Mana Tide Totem", duration = 16, class = "SHAMAN", trackType = "buff"},
+    {spellId = 108280, name = "Healing Tide Totem", duration = 10, cooldownDuration = 180, class = "SHAMAN", trackType = "cast"},
+    {spellId = 98008, name = "Spirit Link Totem", duration = 6, cooldownDuration = 180, class = "SHAMAN", trackType = "cast"},
+    {spellId = 16190, name = "Mana Tide Totem", duration = 16, cooldownDuration = 180, class = "SHAMAN", trackType = "cast"},
 
     -- Monk (Mistweaver)
-    {spellId = 115310, name = "Revival", duration = 180, class = "MONK", trackType = "cast"}, -- 3 min CD
-    {spellId = 116849, name = "Life Cocoon", duration = 12, class = "MONK", trackType = "buff"},
+    {spellId = 115310, name = "Revival", duration = 180, cooldownDuration = 180, class = "MONK", trackType = "cast"},
+    {spellId = 116849, name = "Life Cocoon", duration = 12, cooldownDuration = 120, class = "MONK", trackType = "buff"},
 }
 
 -- Spell ID lookup for cast tracking
@@ -178,9 +179,25 @@ end
 
 -- Create the main cooldown tracker frame
 local function CreateCooldownTrackerFrame(parentFrame, db)
-    cooldownFrame = CreateFrame("Frame", "RooMonkCooldownFrame", parentFrame)
+    cooldownFrame = CreateFrame("Frame", "RooMonkCooldownFrame", UIParent)
     cooldownFrame:SetSize(200, 300)
     cooldownFrame:SetPoint("TOPLEFT", parentFrame, "TOPRIGHT", 10, 0)
+
+    -- Make it movable
+    cooldownFrame:EnableMouse(true)
+    cooldownFrame:SetMovable(true)
+    cooldownFrame:RegisterForDrag("LeftButton")
+    cooldownFrame:SetClampedToScreen(true)
+
+    cooldownFrame:SetScript("OnDragStart", function(self)
+        if not db.locked then
+            self:StartMoving()
+        end
+    end)
+
+    cooldownFrame:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+    end)
 
     -- Background
     local bg = cooldownFrame:CreateTexture(nil, "BACKGROUND")
@@ -239,7 +256,10 @@ local function CreateCooldownTrackerFrame(parentFrame, db)
                         class = class or cooldownInfo.class,
                         startTime = currentTime,
                         endTime = currentTime + duration,
-                        duration = duration
+                        duration = duration,
+                        cooldownDuration = cooldownInfo.cooldownDuration,
+                        buffEndTime = currentTime + duration,
+                        isBuffPhase = true  -- Show active/channel phase first
                     }
                 end
             end
@@ -296,7 +316,10 @@ local function ScanUnitForCooldowns(unit, targetUnits, currentTime)
                                     class = class,
                                     startTime = currentTime,
                                     endTime = expirationTime,
-                                    duration = cooldownInfo.duration > 0 and cooldownInfo.duration or (expirationTime - currentTime)
+                                    duration = cooldownInfo.duration > 0 and cooldownInfo.duration or (expirationTime - currentTime),
+                                    cooldownDuration = cooldownInfo.cooldownDuration,
+                                    buffEndTime = expirationTime,
+                                    isBuffPhase = true
                                 }
                             end
                         end
@@ -342,10 +365,19 @@ local function ScanForCooldowns()
         ScanUnitForCooldowns(unit, targetUnits, currentTime)
     end
 
-    -- Clean up expired cooldowns
+    -- Clean up expired cooldowns and transition buff cooldowns to actual cooldowns
     for key, cd in pairs(activeCooldowns) do
         if currentTime >= cd.endTime then
-            activeCooldowns[key] = nil
+            -- If this was a buff and has a cooldown phase, transition to cooldown tracking
+            if cd.isBuffPhase and cd.cooldownDuration and cd.cooldownDuration > 0 then
+                cd.isBuffPhase = false
+                -- Cooldown started when spell was cast, so endTime = startTime + cooldownDuration
+                cd.endTime = cd.startTime + cd.cooldownDuration
+                cd.duration = cd.cooldownDuration
+            else
+                -- Cooldown fully expired, remove it
+                activeCooldowns[key] = nil
+            end
         end
     end
 end
@@ -385,7 +417,11 @@ local function UpdateCooldownDisplay(db)
 
             -- Update name text with caster
             local classColor = GetClassColor(cd.class)
-            bar.nameText:SetText(cd.casterName .. ": " .. cd.spellName)
+            local displayText = cd.casterName .. ": " .. cd.spellName
+            if cd.isBuffPhase then
+                displayText = displayText .. " (ACTIVE)"
+            end
+            bar.nameText:SetText(displayText)
             bar.nameText:SetTextColor(classColor[1], classColor[2], classColor[3])
 
             -- Update timer
@@ -405,13 +441,19 @@ local function UpdateCooldownDisplay(db)
                 local progress = timeRemaining / cd.duration
                 bar.progress:SetWidth(180 * progress)
 
-                -- Color based on time remaining
-                if timeRemaining > cd.duration * 0.5 then
-                    bar.progress:SetColorTexture(0.2, 0.8, 0.2, 0.7)
-                elseif timeRemaining > cd.duration * 0.25 then
-                    bar.progress:SetColorTexture(0.8, 0.8, 0.2, 0.7)
+                -- Color based on phase
+                if cd.isBuffPhase then
+                    -- Buff is active - use bright colors
+                    if timeRemaining > cd.duration * 0.5 then
+                        bar.progress:SetColorTexture(0.2, 0.8, 0.2, 0.7)
+                    elseif timeRemaining > cd.duration * 0.25 then
+                        bar.progress:SetColorTexture(0.8, 0.8, 0.2, 0.7)
+                    else
+                        bar.progress:SetColorTexture(0.8, 0.2, 0.2, 0.7)
+                    end
                 else
-                    bar.progress:SetColorTexture(0.8, 0.2, 0.2, 0.7)
+                    -- On cooldown - use blue/gray
+                    bar.progress:SetColorTexture(0.3, 0.3, 0.8, 0.7)
                 end
             else
                 bar.timerText:SetText("0s")

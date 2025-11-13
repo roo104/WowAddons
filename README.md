@@ -7,6 +7,7 @@ A comprehensive Renewing Mist tracker for Mistweaver Monks in WoW Classic MoP.
 - **Renewing Mist Tracking**: Real-time tracking of Renewing Mist on all party/raid members
 - **Uplift Counter**: Shows how many targets would be healed by Uplift with optimal timing alerts (3+ targets)
 - **Jade Serpent Statue Monitor**: Duration tracking and status display for your Jade Serpent Statue
+- **External Cooldown Tracker**: Track major healing cooldowns from other healers
 - **Player List**: Detailed list showing all players with Renewing Mist and time remaining
 - **Color-Coded Display**: Visual indicators for buff coverage and urgency
 
@@ -14,8 +15,9 @@ A comprehensive Renewing Mist tracker for Mistweaver Monks in WoW Classic MoP.
 
 - `/rm lock` - Lock the frame position
 - `/rm unlock` - Unlock the frame for repositioning
-- `/rm list` - Toggle player list display
+- `/rm mist` (or `renewing`) - Toggle Renewing Mist tracker
 - `/rm statue` - Toggle Jade Serpent Statue tracker
+- `/rm cooldowns` (or `cds`) - Toggle cooldown tracker
 - `/rm reset` - Reset frame position to default
 - `/rm help` - Show command list
 
