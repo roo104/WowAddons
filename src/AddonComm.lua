@@ -4,7 +4,7 @@
 ---@diagnostic disable: undefined-global
 
 -- Communication prefix (must be unique and <= 16 characters)
-local ADDON_PREFIX = "RooMonk"
+local ADDON_PREFIX = "NordensParis"
 local MESSAGE_VERSION = 1
 
 -- Message types
@@ -112,7 +112,7 @@ function AddonComm.Initialize()
         end
     end)
 
-    print("|cff00ff80RooMonk:|r Addon communication initialized")
+    print("|cff00ff80Nordens Paris:|r Addon communication initialized")
 end
 
 -- Handle received messages
@@ -158,14 +158,14 @@ function AddonComm.OnPlanReceived(parsed)
         timestamp = GetTime()
     }
 
-    print("|cff00ff80RooMonk:|r Received cooldown plan '" .. planName .. "' from " .. sender)
-    print("  Use /rm viewplan to see received plans")
+    print("|cff00ff80Nordens Paris:|r Received cooldown plan '" .. planName .. "' from " .. sender)
+    print("  Use /np viewplan to see received plans")
 end
 
 -- Handle cooldown used notification
 function AddonComm.OnCooldownUsed(parsed)
     local data = parsed.data
-    print("|cff00ff80RooMonk:|r " .. data.casterName .. " used " .. data.spellName)
+    print("|cff00ff80Nordens Paris:|r " .. data.casterName .. " used " .. data.spellName)
 
     -- You could integrate this with the cooldown tracker here
     -- For now, just notify
@@ -174,7 +174,7 @@ end
 -- Handle plan request
 function AddonComm.OnPlanRequested(parsed)
     local sender = parsed.sender
-    print("|cff00ff80RooMonk:|r " .. sender .. " requested your cooldown plan")
+    print("|cff00ff80Nordens Paris:|r " .. sender .. " requested your cooldown plan")
     -- Auto-send current plan if one is active
     -- This can be implemented when we have plan storage
 end
@@ -190,14 +190,14 @@ function AddonComm.SharePlan(plan, channel)
 
     -- Don't send if not in a group
     if channel == "PARTY" and not IsInGroup() then
-        print("|cff00ff80RooMonk:|r You must be in a group to share plans")
+        print("|cff00ff80Nordens Paris:|r You must be in a group to share plans")
         return false
     end
 
     local message = SerializeMessage(MSG_TYPE.PLAN_SHARE, plan)
     C_ChatInfo.SendAddonMessage(ADDON_PREFIX, message, channel)
 
-    print("|cff00ff80RooMonk:|r Shared plan '" .. plan.planName .. "' to " .. string.lower(channel))
+    print("|cff00ff80Nordens Paris:|r Shared plan '" .. plan.planName .. "' to " .. string.lower(channel))
     return true
 end
 
@@ -224,14 +224,14 @@ function AddonComm.RequestPlans()
     local channel = IsInRaid() and "RAID" or "PARTY"
 
     if not IsInGroup() and not IsInRaid() then
-        print("|cff00ff80RooMonk:|r You must be in a group to request plans")
+        print("|cff00ff80Nordens Paris:|r You must be in a group to request plans")
         return false
     end
 
     local message = SerializeMessage(MSG_TYPE.PLAN_REQUEST, {})
     C_ChatInfo.SendAddonMessage(ADDON_PREFIX, message, channel)
 
-    print("|cff00ff80RooMonk:|r Requested cooldown plans from group")
+    print("|cff00ff80Nordens Paris:|r Requested cooldown plans from group")
     return true
 end
 
@@ -247,4 +247,4 @@ function AddonComm.RegisterCallback(msgType, callback)
 end
 
 -- Export the module
-RooMonk_AddonComm = AddonComm
+NordensParis_AddonComm = AddonComm

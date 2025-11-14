@@ -1,4 +1,4 @@
--- JadeSerpentTracker: Jade Serpent Statue tracking module for RooMonk
+-- JadeSerpentTracker: Jade Serpent Statue tracking module for Nordens Paris
 -- Compatible with WoW Classic MoP
 
 ---@diagnostic disable: undefined-global
@@ -17,7 +17,7 @@ local statueRangeText = nil
 
 -- Create a frame to show Jade Serpent Statue status
 local function CreateStatueFrame(parentFrame, db)
-    statueFrame = CreateFrame("Frame", "RooMonkStatueFrame", parentFrame)
+    statueFrame = CreateFrame("Frame", "NordensParisStatueFrame", parentFrame)
     statueFrame:SetSize(200, 50)
     statueFrame:SetPoint("BOTTOM", parentFrame, "TOP", 0, 5)
 
@@ -168,7 +168,7 @@ local function UpdateStatueDisplay(db)
 end
 
 -- Export functions
-RooMonk_JadeSerpentTracker = {
+NordensParis_JadeSerpentTracker = {
     CreateStatueFrame = CreateStatueFrame,
     UpdateStatueDisplay = UpdateStatueDisplay,
     GetStatueInfo = GetStatueInfo,

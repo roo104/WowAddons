@@ -1,4 +1,4 @@
--- RenewingMistTracker: Renewing Mist tracking module for RooMonk
+-- RenewingMistTracker: Renewing Mist tracking module for Nordens Paris
 -- Compatible with WoW Classic MoP
 
 ---@diagnostic disable: undefined-global
@@ -235,7 +235,7 @@ local function UpdateDisplay(db)
 end
 
 -- Export functions
-RooMonk_RenewingMistTracker = {
+NordensParis_RenewingMistTracker = {
     CreateRenewingMistFrame = CreateRenewingMistFrame,
     UpdateDisplay = UpdateDisplay,
     GetRenewingMistTargets = GetRenewingMistTargets

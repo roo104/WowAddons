@@ -1,4 +1,4 @@
-# RooMonk - Mistweaver Monk Addon
+# Nordens Paris - Mistweaver Monk Addon
 
 A comprehensive Renewing Mist tracker for Mistweaver Monks in WoW Classic MoP.
 
@@ -13,19 +13,19 @@ A comprehensive Renewing Mist tracker for Mistweaver Monks in WoW Classic MoP.
 
 ## Commands
 
-- `/rm lock` - Lock the frame position
-- `/rm unlock` - Unlock the frame for repositioning
-- `/rm mist` (or `renewing`) - Toggle Renewing Mist tracker
-- `/rm statue` - Toggle Jade Serpent Statue tracker
-- `/rm cooldowns` (or `cds`) - Toggle cooldown tracker
-- `/rm reset` - Reset frame position to default
-- `/rm help` - Show command list
+- `/np lock` - Lock the frame position
+- `/np unlock` - Unlock the frame for repositioning
+- `/np mist` (or `renewing`) - Toggle Renewing Mist tracker
+- `/np statue` - Toggle Jade Serpent Statue tracker
+- `/np cooldowns` (or `cds`) - Toggle cooldown tracker
+- `/np reset` - Reset frame position to default
+- `/np help` - Show command list
 
 ## Installation
 
 1. Copy the addon folder to `World of Warcraft\_classic_\Interface\AddOns\`
 2. Restart WoW or reload UI with `/reload`
-3. Use `/rm help` to see available commands
+3. Use `/nphelp` to see available commands
 
 ## Feature Suggestions & Roadmap
 

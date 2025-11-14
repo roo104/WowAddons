@@ -6,7 +6,7 @@
 -- Module table
 local PlanManager = {}
 
--- Default saved variable will be initialized in RooMonk.lua
+-- Default saved variable will be initialized in NordensParis.lua
 local savedPlans = nil
 
 -- Initialize plan storage
@@ -320,4 +320,4 @@ function PlanManager.RenamePlan(oldName, newName)
 end
 
 -- Export the module
-RooMonk_PlanManager = PlanManager
+NordensParis_PlanManager = PlanManager

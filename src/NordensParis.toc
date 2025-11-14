@@ -1,9 +1,9 @@
 ## Interface: 50400
-## Title: RooMonk - Renewing Mist Tracker
+## Title: Nordens Paris - Renewing Mist Tracker
 ## Notes: Tracks Renewing Mist on party and raid members for Mistweaver Monks
 ## Author: Jonas
 ## Version: 1.1.0
-## SavedVariablesPerCharacter: RooMonkCharDB
+## SavedVariablesPerCharacter: NordensParisCharDB
 
 # Core modules
 RenewingMistTracker.lua
@@ -16,4 +16,4 @@ PlanManager.lua
 PlanUI.lua
 
 # Main addon file
-RooMonk.lua
+NordensParis.lua

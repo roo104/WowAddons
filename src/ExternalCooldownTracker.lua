@@ -133,7 +133,7 @@ end
 
 -- Create cooldown bar
 local function CreateCooldownBar(index)
-    local bar = CreateFrame("Frame", "RooMonkCooldownBar"..index, cooldownFrame)
+    local bar = CreateFrame("Frame", "NordensParisCooldownBar"..index, cooldownFrame)
     bar:SetSize(180, 20)
     bar:SetPoint("TOPLEFT", 10, -30 - (index - 1) * 25)
 
@@ -181,7 +181,7 @@ local function CreateCooldownTrackerFrame(parentFrame, db)
     activeCooldowns = db.activeCooldowns or {}
     db.activeCooldowns = activeCooldowns
 
-    cooldownFrame = CreateFrame("Frame", "RooMonkCooldownFrame", UIParent)
+    cooldownFrame = CreateFrame("Frame", "NordensParisCooldownFrame", UIParent)
     cooldownFrame:SetSize(200, 300)
 
     -- Restore saved position or use default position relative to parent
@@ -495,7 +495,7 @@ local function ToggleFrame()
 end
 
 -- Export functions
-RooMonk_ExternalCooldownTracker = {
+NordensParis_ExternalCooldownTracker = {
     CreateCooldownTrackerFrame = CreateCooldownTrackerFrame,
     UpdateCooldownDisplay = UpdateCooldownDisplay,
     ToggleFrame = ToggleFrame

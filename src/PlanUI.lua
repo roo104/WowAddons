@@ -34,7 +34,7 @@ function PlanUI.CreateMainFrame()
         return mainFrame
     end
 
-    mainFrame = CreateFrame("Frame", "RooMonkPlanFrame", UIParent, "BasicFrameTemplateWithInset")
+    mainFrame = CreateFrame("Frame", "NordensParisPlanFrame", UIParent, "BasicFrameTemplateWithInset")
     mainFrame:SetSize(500, 400)
     mainFrame:SetPoint("CENTER")
     mainFrame:SetMovable(true)
@@ -48,7 +48,7 @@ function PlanUI.CreateMainFrame()
     -- Title
     mainFrame.title = mainFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     mainFrame.title:SetPoint("TOP", 0, -5)
-    mainFrame.title:SetText("RooMonk - Cooldown Plans")
+    mainFrame.title:SetText("Nordens Paris - Cooldown Plans")
 
     -- Close button (already part of BasicFrameTemplate)
     mainFrame.CloseButton:SetScript("OnClick", function()
@@ -66,7 +66,7 @@ function PlanUI.CreateTabs(parent)
     local tabs = {}
 
     -- Tab 1: My Plans
-    local tab1 = CreateFrame("Button", "RooMonkPlanTab1", parent, "PanelTabButtonTemplate")
+    local tab1 = CreateFrame("Button", "NordensParisPlanTab1", parent, "PanelTabButtonTemplate")
     tab1:SetPoint("BOTTOMLEFT", parent, "TOPLEFT", 5, -28)
     tab1:SetText("My Plans")
     tab1:SetScript("OnClick", function()
@@ -76,7 +76,7 @@ function PlanUI.CreateTabs(parent)
     table.insert(tabs, tab1)
 
     -- Tab 2: Received Plans
-    local tab2 = CreateFrame("Button", "RooMonkPlanTab2", parent, "PanelTabButtonTemplate")
+    local tab2 = CreateFrame("Button", "NordensParisPlanTab2", parent, "PanelTabButtonTemplate")
     tab2:SetPoint("LEFT", tab1, "RIGHT", -15, 0)
     tab2:SetText("Received Plans")
     tab2:SetScript("OnClick", function()
@@ -99,12 +99,12 @@ function PlanUI.CreatePlanListFrame()
         return planListFrame
     end
 
-    planListFrame = CreateFrame("Frame", "RooMonkPlanList", mainFrame)
+    planListFrame = CreateFrame("Frame", "NordensParisPlanList", mainFrame)
     planListFrame:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 10, -30)
     planListFrame:SetPoint("BOTTOMRIGHT", mainFrame, "BOTTOMRIGHT", -10, 10)
 
     -- Scroll frame for plans
-    local scrollFrame = CreateFrame("ScrollFrame", "RooMonkPlanListScroll", planListFrame, "UIPanelScrollFrameTemplate")
+    local scrollFrame = CreateFrame("ScrollFrame", "NordensParisPlanListScroll", planListFrame, "UIPanelScrollFrameTemplate")
     scrollFrame:SetPoint("TOPLEFT", 0, -30)
     scrollFrame:SetPoint("BOTTOMRIGHT", -25, 0)
 
@@ -116,7 +116,7 @@ function PlanUI.CreatePlanListFrame()
     planListFrame.planButtons = {}
 
     -- New plan button
-    local newPlanButton = CreateFrame("Button", "RooMonkNewPlanButton", planListFrame, "UIPanelButtonTemplate")
+    local newPlanButton = CreateFrame("Button", "NordensParisNewPlanButton", planListFrame, "UIPanelButtonTemplate")
     newPlanButton:SetSize(120, 25)
     newPlanButton:SetPoint("TOPLEFT", 5, -5)
     newPlanButton:SetText("New Plan")
@@ -143,12 +143,12 @@ end
 
 -- Refresh plan list display
 function PlanUI.RefreshPlanList()
-    if not planListFrame or not RooMonk_PlanManager then
+    if not planListFrame or not NordensParis_PlanManager then
         return
     end
 
     local scrollChild = planListFrame.scrollChild
-    local plans = RooMonk_PlanManager.GetAllPlans()
+    local plans = NordensParis_PlanManager.GetAllPlans()
 
     -- Clear existing buttons
     for _, btn in ipairs(planListFrame.planButtons) do
@@ -207,7 +207,7 @@ function PlanUI.RefreshPlanList()
         btn:SetPoint("TOPLEFT", 10, -yOffset)
         btn:Show()
 
-        local summary = RooMonk_PlanManager.GetPlanSummary(planName)
+        local summary = NordensParis_PlanManager.GetPlanSummary(planName)
         btn.nameText:SetText(planName)
         btn.infoText:SetText(string.format("%d steps | %d completed | by %s",
             summary.stepCount, summary.completedCount, summary.author or "Unknown"))
@@ -235,7 +235,7 @@ end
 
 -- Show new plan dialog
 function PlanUI.ShowNewPlanDialog()
-    StaticPopupDialogs["ROOMONK_NEW_PLAN"] = {
+    StaticPopupDialogs["NORDENSPARIS_NEW_PLAN"] = {
         text = "Enter a name for the new plan:",
         button1 = "Create",
         button2 = "Cancel",
@@ -245,12 +245,12 @@ function PlanUI.ShowNewPlanDialog()
             if editBox then
                 local planName = editBox:GetText()
                 if planName and planName ~= "" then
-                    local plan, err = RooMonk_PlanManager.CreatePlan(planName)
+                    local plan, err = NordensParis_PlanManager.CreatePlan(planName)
                     if plan then
                         PlanUI.RefreshPlanList()
                         PlanUI.EditPlan(planName)
                     else
-                        print("|cff00ff80RooMonk:|r " .. err)
+                        print("|cff00ff80Nordens Paris:|r " .. err)
                     end
                 end
             end
@@ -260,7 +260,7 @@ function PlanUI.ShowNewPlanDialog()
         hideOnEscape = true,
         preferredIndex = 3,
     }
-    StaticPopup_Show("ROOMONK_NEW_PLAN")
+    StaticPopup_Show("NORDENSPARIS_NEW_PLAN")
 end
 
 -- Create plan editor frame
@@ -269,7 +269,7 @@ function PlanUI.CreatePlanEditorFrame()
         return planEditorFrame
     end
 
-    planEditorFrame = CreateFrame("Frame", "RooMonkPlanEditor", mainFrame)
+    planEditorFrame = CreateFrame("Frame", "NordensParisPlanEditor", mainFrame)
     planEditorFrame:SetPoint("TOPLEFT", mainFrame, "TOPLEFT", 10, -30)
     planEditorFrame:SetPoint("BOTTOMRIGHT", mainFrame, "BOTTOMRIGHT", -10, 10)
     planEditorFrame:Hide()
@@ -301,7 +301,7 @@ function PlanUI.CreatePlanEditorFrame()
     planEditorFrame.renameButton = renameButton
 
     -- Scroll frame for steps
-    local scrollFrame = CreateFrame("ScrollFrame", "RooMonkPlanEditorScroll", planEditorFrame, "UIPanelScrollFrameTemplate")
+    local scrollFrame = CreateFrame("ScrollFrame", "NordensParisPlanEditorScroll", planEditorFrame, "UIPanelScrollFrameTemplate")
     scrollFrame:SetPoint("TOPLEFT", 10, -60)
     scrollFrame:SetPoint("BOTTOMRIGHT", -35, 40)
 
@@ -394,13 +394,13 @@ end
 
 -- Edit a plan
 function PlanUI.EditPlan(planName)
-    if not RooMonk_PlanManager then
+    if not NordensParis_PlanManager then
         return
     end
 
-    local plan = RooMonk_PlanManager.GetPlan(planName)
+    local plan = NordensParis_PlanManager.GetPlan(planName)
     if not plan then
-        print("|cff00ff80RooMonk:|r Plan not found: " .. planName)
+        print("|cff00ff80Nordens Paris:|r Plan not found: " .. planName)
         return
     end
 
@@ -422,11 +422,11 @@ end
 
 -- Refresh plan editor display
 function PlanUI.RefreshPlanEditor()
-    if not planEditorFrame or not currentPlan or not RooMonk_PlanManager then
+    if not planEditorFrame or not currentPlan or not NordensParis_PlanManager then
         return
     end
 
-    local plan = RooMonk_PlanManager.GetPlan(currentPlan)
+    local plan = NordensParis_PlanManager.GetPlan(currentPlan)
     if not plan then
         return
     end
@@ -518,19 +518,19 @@ function PlanUI.RefreshPlanEditor()
 
         -- Delete button
         btn.deleteButton:SetScript("OnClick", function()
-            RooMonk_PlanManager.RemoveStep(currentPlan, i)
+            NordensParis_PlanManager.RemoveStep(currentPlan, i)
             PlanUI.RefreshPlanEditor()
         end)
 
         -- Move up button
         btn.upButton:SetScript("OnClick", function()
-            RooMonk_PlanManager.MoveStep(currentPlan, i, "up")
+            NordensParis_PlanManager.MoveStep(currentPlan, i, "up")
             PlanUI.RefreshPlanEditor()
         end)
 
         -- Move down button
         btn.downButton:SetScript("OnClick", function()
-            RooMonk_PlanManager.MoveStep(currentPlan, i, "down")
+            NordensParis_PlanManager.MoveStep(currentPlan, i, "down")
             PlanUI.RefreshPlanEditor()
         end)
 
@@ -544,7 +544,7 @@ end
 -- Show add step dialog
 function PlanUI.ShowAddStepDialog()
     -- Create custom dialog frame
-    local dialog = CreateFrame("Frame", "RooMonkAddStepDialog", UIParent, "BasicFrameTemplateWithInset")
+    local dialog = CreateFrame("Frame", "NordensParisAddStepDialog", UIParent, "BasicFrameTemplateWithInset")
     dialog:SetSize(350, 220)
     dialog:SetPoint("CENTER")
     dialog:SetFrameStrata("DIALOG")
@@ -578,7 +578,7 @@ function PlanUI.ShowAddStepDialog()
     spellLabel:SetText("Spell:")
 
     -- Spell dropdown
-    local spellDropdown = CreateFrame("Frame", "RooMonkSpellDropdown", dialog, "UIDropDownMenuTemplate")
+    local spellDropdown = CreateFrame("Frame", "NordensParisSpellDropdown", dialog, "UIDropDownMenuTemplate")
     spellDropdown:SetPoint("TOPLEFT", 5, -105)
 
     local selectedSpell = AVAILABLE_SPELLS[1]
@@ -622,9 +622,9 @@ function PlanUI.ShowAddStepDialog()
             if casterName == "" then
                 casterName = nil
             end
-            local plan = RooMonk_PlanManager.GetPlan(currentPlan)
+            local plan = NordensParis_PlanManager.GetPlan(currentPlan)
             local nextOrder = plan and (#plan.steps + 1) or 1
-            RooMonk_PlanManager.AddStep(currentPlan, nextOrder, selectedSpell.name, casterName)
+            NordensParis_PlanManager.AddStep(currentPlan, nextOrder, selectedSpell.name, casterName)
             PlanUI.RefreshPlanEditor()
             dialog:Hide()
         end
@@ -650,7 +650,7 @@ end
 -- Show edit step dialog
 function PlanUI.ShowEditStepDialog(stepIndex, step)
     -- Create custom dialog frame
-    local dialog = CreateFrame("Frame", "RooMonkEditStepDialog", UIParent, "BasicFrameTemplateWithInset")
+    local dialog = CreateFrame("Frame", "NordensParisEditStepDialog", UIParent, "BasicFrameTemplateWithInset")
     dialog:SetSize(350, 220)
     dialog:SetPoint("CENTER")
     dialog:SetFrameStrata("DIALOG")
@@ -685,7 +685,7 @@ function PlanUI.ShowEditStepDialog(stepIndex, step)
     spellLabel:SetText("Spell:")
 
     -- Spell dropdown
-    local spellDropdown = CreateFrame("Frame", "RooMonkSpellDropdownEdit", dialog, "UIDropDownMenuTemplate")
+    local spellDropdown = CreateFrame("Frame", "NordensParisSpellDropdownEdit", dialog, "UIDropDownMenuTemplate")
     spellDropdown:SetPoint("TOPLEFT", 5, -105)
 
     -- Find current spell or default to first
@@ -739,7 +739,7 @@ function PlanUI.ShowEditStepDialog(stepIndex, step)
             if casterName == "" then
                 casterName = nil
             end
-            RooMonk_PlanManager.UpdateStep(currentPlan, stepIndex, step.order, selectedSpell.value.name, casterName)
+            NordensParis_PlanManager.UpdateStep(currentPlan, stepIndex, step.order, selectedSpell.value.name, casterName)
             PlanUI.RefreshPlanEditor()
             dialog:Hide()
         end
@@ -768,7 +768,7 @@ function PlanUI.ShowRenamePlanDialog()
         return
     end
 
-    StaticPopupDialogs["ROOMONK_RENAME_PLAN"] = {
+    StaticPopupDialogs["NORDENSPARIS_RENAME_PLAN"] = {
         text = "Enter new name for plan '" .. currentPlan .. "':",
         button1 = "Rename",
         button2 = "Cancel",
@@ -784,13 +784,13 @@ function PlanUI.ShowRenamePlanDialog()
             if editBox and currentPlan then
                 local newName = editBox:GetText()
                 if newName and newName ~= "" and newName ~= currentPlan then
-                    local success, err = RooMonk_PlanManager.RenamePlan(currentPlan, newName)
+                    local success, err = NordensParis_PlanManager.RenamePlan(currentPlan, newName)
                     if success then
                         currentPlan = newName
                         planEditorFrame.titleText:SetText(newName)
-                        print("|cff00ff80RooMonk:|r Plan renamed to '" .. newName .. "'")
+                        print("|cff00ff80Nordens Paris:|r Plan renamed to '" .. newName .. "'")
                     else
-                        print("|cff00ff80RooMonk:|r " .. err)
+                        print("|cff00ff80Nordens Paris:|r " .. err)
                     end
                 end
             end
@@ -800,33 +800,33 @@ function PlanUI.ShowRenamePlanDialog()
         hideOnEscape = true,
         preferredIndex = 3,
     }
-    StaticPopup_Show("ROOMONK_RENAME_PLAN")
+    StaticPopup_Show("NORDENSPARIS_RENAME_PLAN")
 end
 
 -- Share a plan
 function PlanUI.SharePlan(planName)
-    if not RooMonk_AddonComm or not RooMonk_PlanManager then
+    if not NordensParis_AddonComm or not NordensParis_PlanManager then
         return
     end
 
-    local exportData = RooMonk_PlanManager.ExportPlan(planName)
+    local exportData = NordensParis_PlanManager.ExportPlan(planName)
     if exportData then
-        RooMonk_AddonComm.SharePlan(exportData)
+        NordensParis_AddonComm.SharePlan(exportData)
     else
-        print("|cff00ff80RooMonk:|r Failed to share plan")
+        print("|cff00ff80Nordens Paris:|r Failed to share plan")
     end
 end
 
 -- Delete a plan
 function PlanUI.DeletePlan(planName)
-    StaticPopupDialogs["ROOMONK_DELETE_PLAN"] = {
+    StaticPopupDialogs["NORDENSPARIS_DELETE_PLAN"] = {
         text = "Delete plan '" .. planName .. "'?",
         button1 = "Delete",
         button2 = "Cancel",
         OnAccept = function()
-            if RooMonk_PlanManager.DeletePlan(planName) then
+            if NordensParis_PlanManager.DeletePlan(planName) then
                 PlanUI.RefreshPlanList()
-                print("|cff00ff80RooMonk:|r Plan deleted")
+                print("|cff00ff80Nordens Paris:|r Plan deleted")
             end
         end,
         timeout = 0,
@@ -834,16 +834,16 @@ function PlanUI.DeletePlan(planName)
         hideOnEscape = true,
         preferredIndex = 3,
     }
-    StaticPopup_Show("ROOMONK_DELETE_PLAN")
+    StaticPopup_Show("NORDENSPARIS_DELETE_PLAN")
 end
 
 -- Show received plans
 function PlanUI.ShowReceivedPlans()
-    print("|cff00ff80RooMonk:|r Received plans view")
+    print("|cff00ff80Nordens Paris:|r Received plans view")
     print("  This feature will be available in the next update")
 
-    if RooMonk_AddonComm then
-        local receivedPlans = RooMonk_AddonComm.GetReceivedPlans()
+    if NordensParis_AddonComm then
+        local receivedPlans = NordensParis_AddonComm.GetReceivedPlans()
         if next(receivedPlans) then
             for sender, plans in pairs(receivedPlans) do
                 print("  From " .. sender .. ":")
@@ -872,4 +872,4 @@ function PlanUI.Toggle()
 end
 
 -- Export the module
-RooMonk_PlanUI = PlanUI
+NordensParis_PlanUI = PlanUI
