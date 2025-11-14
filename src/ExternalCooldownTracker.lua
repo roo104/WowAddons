@@ -15,8 +15,6 @@ local TRACKED_COOLDOWNS = {
     {spellId = 31821, name = "Aura Mastery", duration = 6, cooldownDuration = 180, class = "PALADIN", trackType = "buff"},
     {spellId = 6940, name = "Hand of Sacrifice", duration = 12, cooldownDuration = 120, class = "PALADIN", trackType = "buff"},
     {spellId = 1022, name = "Hand of Protection", duration = 10, cooldownDuration = 300, class = "PALADIN", trackType = "buff"},
-    {spellId = 1044, name = "Hand of Freedom", duration = 6, cooldownDuration = 25, class = "PALADIN", trackType = "buff"},
-    {spellId = 31842, name = "Avenging Wrath", duration = 20, cooldownDuration = 180, class = "PALADIN", trackType = "buff"},
 
     -- Priest (Holy/Disc)
     {spellId = 62618, name = "Power Word: Barrier", duration = 10, cooldownDuration = 180, class = "PRIEST", trackType = "cast"},
