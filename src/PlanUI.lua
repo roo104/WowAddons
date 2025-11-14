@@ -9,7 +9,6 @@ local PlanUI = {}
 local mainFrame = nil
 local planListFrame = nil
 local planEditorFrame = nil
-local planViewerFrame = nil
 local currentPlan = nil
 
 -- Available spells for dropdown
@@ -67,7 +66,7 @@ function PlanUI.CreateTabs(parent)
 
     -- Tab 1: My Plans
     local tab1 = CreateFrame("Button", "NordensParisPlanTab1", parent, "PanelTabButtonTemplate")
-    tab1:SetPoint("BOTTOMLEFT", parent, "TOPLEFT", 5, -28)
+    tab1:SetPoint("TOPLEFT", parent, "BOTTOMLEFT", 10, 0)
     tab1:SetText("My Plans")
     tab1:SetScript("OnClick", function()
         PanelTemplates_SetTab(parent, 1)
@@ -77,7 +76,7 @@ function PlanUI.CreateTabs(parent)
 
     -- Tab 2: Received Plans
     local tab2 = CreateFrame("Button", "NordensParisPlanTab2", parent, "PanelTabButtonTemplate")
-    tab2:SetPoint("LEFT", tab1, "RIGHT", -15, 0)
+    tab2:SetPoint("LEFT", tab1, "RIGHT", 5, 0)
     tab2:SetText("Received Plans")
     tab2:SetScript("OnClick", function()
         PanelTemplates_SetTab(parent, 2)
@@ -105,13 +104,14 @@ function PlanUI.CreatePlanListFrame()
 
     -- Scroll frame for plans
     local scrollFrame = CreateFrame("ScrollFrame", "NordensParisPlanListScroll", planListFrame, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT", 0, -30)
+    scrollFrame:SetPoint("TOPLEFT", 0, -35)
     scrollFrame:SetPoint("BOTTOMRIGHT", -25, 0)
 
     local scrollChild = CreateFrame("Frame", nil, scrollFrame)
     scrollChild:SetSize(430, 1)
     scrollFrame:SetScrollChild(scrollChild)
 
+    planListFrame.scrollFrame = scrollFrame
     planListFrame.scrollChild = scrollChild
     planListFrame.planButtons = {}
 
@@ -133,9 +133,8 @@ function PlanUI.ShowPlanList()
         PlanUI.CreatePlanListFrame()
     end
 
-    -- Hide other frames
+    -- Hide other frames (but not viewer - it's independent)
     if planEditorFrame then planEditorFrame:Hide() end
-    if planViewerFrame then planViewerFrame:Hide() end
 
     planListFrame:Show()
     PlanUI.RefreshPlanList()
@@ -179,26 +178,32 @@ function PlanUI.RefreshPlanList()
 
             -- Info text
             btn.infoText = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-            btn.infoText:SetPoint("TOPLEFT", 10, -25)
+            btn.infoText:SetPoint("TOPLEFT", 10, -20)
             btn.infoText:SetJustifyH("LEFT")
             btn.infoText:SetTextColor(0.7, 0.7, 0.7)
 
-            -- Edit button (rightmost)
-            btn.editButton = CreateFrame("Button", nil, btn, "UIPanelButtonTemplate")
-            btn.editButton:SetSize(60, 20)
-            btn.editButton:SetPoint("TOPRIGHT", -10, -5)
-            btn.editButton:SetText("Edit")
+            -- Activate button (leftmost)
+            btn.activateButton = CreateFrame("Button", nil, btn, "UIPanelButtonTemplate")
+            btn.activateButton:SetSize(70, 20)
+            btn.activateButton:SetPoint("TOPLEFT", 10, -35)
+            btn.activateButton:SetText("Activate")
 
-            -- Share button (middle)
+            -- Share button
             btn.shareButton = CreateFrame("Button", nil, btn, "UIPanelButtonTemplate")
             btn.shareButton:SetSize(60, 20)
-            btn.shareButton:SetPoint("RIGHT", btn.editButton, "LEFT", -5, 0)
+            btn.shareButton:SetPoint("LEFT", btn.activateButton, "RIGHT", 5, 0)
             btn.shareButton:SetText("Share")
 
-            -- Delete button (leftmost)
+            -- Edit button
+            btn.editButton = CreateFrame("Button", nil, btn, "UIPanelButtonTemplate")
+            btn.editButton:SetSize(60, 20)
+            btn.editButton:SetPoint("LEFT", btn.shareButton, "RIGHT", 5, 0)
+            btn.editButton:SetText("Edit")
+
+            -- Delete button
             btn.deleteButton = CreateFrame("Button", nil, btn, "UIPanelButtonTemplate")
             btn.deleteButton:SetSize(60, 20)
-            btn.deleteButton:SetPoint("RIGHT", btn.shareButton, "LEFT", -5, 0)
+            btn.deleteButton:SetPoint("LEFT", btn.editButton, "RIGHT", 5, 0)
             btn.deleteButton:SetText("Delete")
 
             table.insert(planListFrame.planButtons, btn)
@@ -209,8 +214,8 @@ function PlanUI.RefreshPlanList()
 
         local summary = NordensParis_PlanManager.GetPlanSummary(planName)
         btn.nameText:SetText(planName)
-        btn.infoText:SetText(string.format("%d steps | %d completed | by %s",
-            summary.stepCount, summary.completedCount, summary.author or "Unknown"))
+        btn.infoText:SetText(string.format("%d steps | by %s",
+            summary.stepCount, summary.author or "Unknown"))
 
         -- Button handlers
         btn.editButton:SetScript("OnClick", function()
@@ -225,12 +230,26 @@ function PlanUI.RefreshPlanList()
             PlanUI.DeletePlan(planName)
         end)
 
+        btn.activateButton:SetScript("OnClick", function()
+            PlanUI.ActivatePlan(planName)
+        end)
+
         yOffset = yOffset + 65
         index = index + 1
     end
 
     -- Update scroll child height
     scrollChild:SetHeight(math.max(yOffset, 1))
+
+    -- Hide scrollbar if content fits
+    local scrollBar = planListFrame.scrollFrame.ScrollBar
+    if scrollBar then
+        if yOffset <= planListFrame.scrollFrame:GetHeight() then
+            scrollBar:Hide()
+        else
+            scrollBar:Show()
+        end
+    end
 end
 
 -- Show new plan dialog
@@ -309,6 +328,7 @@ function PlanUI.CreatePlanEditorFrame()
     scrollChild:SetSize(430, 1)
     scrollFrame:SetScrollChild(scrollChild)
 
+    planEditorFrame.scrollFrame = scrollFrame
     planEditorFrame.scrollChild = scrollChild
     planEditorFrame.stepButtons = {}
 
@@ -410,9 +430,8 @@ function PlanUI.EditPlan(planName)
         PlanUI.CreatePlanEditorFrame()
     end
 
-    -- Hide other frames
+    -- Hide other frames (but not viewer - it's independent)
     if planListFrame then planListFrame:Hide() end
-    if planViewerFrame then planViewerFrame:Hide() end
 
     planEditorFrame:Show()
     planEditorFrame.titleText:SetText(planName)
@@ -539,6 +558,16 @@ function PlanUI.RefreshPlanEditor()
 
     -- Update scroll child height
     scrollChild:SetHeight(math.max(yOffset, 1))
+
+    -- Hide scrollbar if content fits
+    local scrollBar = planEditorFrame.scrollFrame.ScrollBar
+    if scrollBar then
+        if yOffset <= planEditorFrame.scrollFrame:GetHeight() then
+            scrollBar:Hide()
+        else
+            scrollBar:Show()
+        end
+    end
 end
 
 -- Show add step dialog
@@ -835,6 +864,17 @@ function PlanUI.DeletePlan(planName)
         preferredIndex = 3,
     }
     StaticPopup_Show("NORDENSPARIS_DELETE_PLAN")
+end
+
+-- Activate a plan (delegate to ActivePlan module)
+function PlanUI.ActivatePlan(planName)
+    if NordensParis_ActivePlan then
+        -- Initialize with database if not already done
+        if NordensParisCharDB then
+            NordensParis_ActivePlan.Initialize(NordensParisCharDB)
+        end
+        NordensParis_ActivePlan.Activate(planName)
+    end
 end
 
 -- Show received plans

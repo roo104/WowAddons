@@ -25,7 +25,11 @@ NordensParisCharDB = NordensParisCharDB or {
     cooldownX = nil,
     cooldownY = nil,
     activeCooldowns = {},
-    plans = {}
+    plans = {},
+    activePlan = nil,
+    showActivePlan = false,
+    activePlanX = nil,
+    activePlanY = nil
 }
 
 -- Initialize the main frame
@@ -66,6 +70,17 @@ local function InitializeFrame()
     if NordensParis_ExternalCooldownTracker then
         cooldownFrame = NordensParis_ExternalCooldownTracker.CreateCooldownTrackerFrame(frame, NordensParisCharDB)
     end
+
+    -- Initialize PlanManager before ActivePlan
+    if NordensParis_PlanManager then
+        NordensParis_PlanManager.Initialize(NordensParisCharDB)
+    end
+
+    -- Restore active plan if it was shown
+    if NordensParis_ActivePlan and NordensParisCharDB.showActivePlan and NordensParisCharDB.activePlan then
+        NordensParis_ActivePlan.Initialize(NordensParisCharDB)
+        NordensParis_ActivePlan.Activate(NordensParisCharDB.activePlan, true)  -- Pass true to indicate restoration
+    end
 end
 
 -- Update the display
@@ -89,17 +104,18 @@ end
 -- Event handler
 local function OnEvent(self, event, ...)
     if event == "PLAYER_LOGIN" then
-        InitializeFrame()
-        UpdateDisplay()
+        -- Initialize plan manager and addon communication FIRST
+        if NordensParis_PlanManager then
+            NordensParis_PlanManager.Initialize(NordensParisCharDB)
+        end
 
-        -- Initialize addon communication and plan manager
         if NordensParis_AddonComm then
             NordensParis_AddonComm.Initialize()
         end
 
-        if NordensParis_PlanManager then
-            NordensParis_PlanManager.Initialize(NordensParisCharDB)
-        end
+        -- Then initialize frames (which may restore active plan)
+        InitializeFrame()
+        UpdateDisplay()
     elseif event == "UNIT_AURA" or event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_ENTERING_WORLD" then
         UpdateDisplay()
     end
