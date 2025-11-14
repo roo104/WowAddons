@@ -12,6 +12,15 @@ local planEditorFrame = nil
 local planViewerFrame = nil
 local currentPlan = nil
 
+-- Available spells for dropdown
+local AVAILABLE_SPELLS = {
+    {id = 740, name = "Tranquility"},
+    {id = 115310, name = "Revival"},
+    {id = 108280, name = "Healing Tide Totem"},
+    {id = 62618, name = "Power Word: Barrier"},
+    {id = 31842, name = "Devotion Aura"},
+}
+
 -- Colors
 local COLOR_HEADER = {0.5, 0.8, 1}
 local COLOR_BUTTON = {0.2, 0.6, 0.8}
@@ -174,22 +183,22 @@ function PlanUI.RefreshPlanList()
             btn.infoText:SetJustifyH("LEFT")
             btn.infoText:SetTextColor(0.7, 0.7, 0.7)
 
-            -- Edit button
+            -- Edit button (rightmost)
             btn.editButton = CreateFrame("Button", nil, btn, "UIPanelButtonTemplate")
             btn.editButton:SetSize(60, 20)
             btn.editButton:SetPoint("TOPRIGHT", -10, -5)
             btn.editButton:SetText("Edit")
 
-            -- Share button
+            -- Share button (middle)
             btn.shareButton = CreateFrame("Button", nil, btn, "UIPanelButtonTemplate")
             btn.shareButton:SetSize(60, 20)
-            btn.shareButton:SetPoint("TOPRIGHT", -75, -5)
+            btn.shareButton:SetPoint("RIGHT", btn.editButton, "LEFT", -5, 0)
             btn.shareButton:SetText("Share")
 
-            -- Delete button
+            -- Delete button (leftmost)
             btn.deleteButton = CreateFrame("Button", nil, btn, "UIPanelButtonTemplate")
             btn.deleteButton:SetSize(60, 20)
-            btn.deleteButton:SetPoint("TOPRIGHT", -140, -5)
+            btn.deleteButton:SetPoint("RIGHT", btn.shareButton, "LEFT", -5, 0)
             btn.deleteButton:SetText("Delete")
 
             table.insert(planListFrame.planButtons, btn)
@@ -281,9 +290,19 @@ function PlanUI.CreatePlanEditorFrame()
     titleText:SetText("Edit Plan")
     planEditorFrame.titleText = titleText
 
+    -- Rename button
+    local renameButton = CreateFrame("Button", nil, planEditorFrame, "UIPanelButtonTemplate")
+    renameButton:SetSize(80, 20)
+    renameButton:SetPoint("TOP", titleText, "BOTTOM", 0, -5)
+    renameButton:SetText("Rename")
+    renameButton:SetScript("OnClick", function()
+        PlanUI.ShowRenamePlanDialog()
+    end)
+    planEditorFrame.renameButton = renameButton
+
     -- Scroll frame for steps
     local scrollFrame = CreateFrame("ScrollFrame", "RooMonkPlanEditorScroll", planEditorFrame, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT", 10, -40)
+    scrollFrame:SetPoint("TOPLEFT", 10, -60)
     scrollFrame:SetPoint("BOTTOMRIGHT", -35, 40)
 
     local scrollChild = CreateFrame("Frame", nil, scrollFrame)
@@ -322,21 +341,28 @@ local function CreateStepButton(index)
     btn.orderText:SetJustifyH("LEFT")
     btn.orderText:SetTextColor(1, 0.8, 0)
 
-    -- Spell name
-    btn.spellText = btn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    btn.spellText:SetPoint("LEFT", 40, 5)
-    btn.spellText:SetJustifyH("LEFT")
+    -- Spell icon
+    btn.spellIcon = btn:CreateTexture(nil, "OVERLAY")
+    btn.spellIcon:SetSize(32, 32)
+    btn.spellIcon:SetPoint("LEFT", 40, 0)
+    btn.spellIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 
-    -- Caster name
-    btn.casterText = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    btn.casterText:SetPoint("LEFT", 40, -10)
+    -- Availability icon (green tick or red cross)
+    btn.availIcon = btn:CreateTexture(nil, "OVERLAY")
+    btn.availIcon:SetSize(16, 16)
+    btn.availIcon:SetPoint("LEFT", 78, 5)
+
+    -- Caster name (on top with yellow text)
+    btn.casterText = btn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    btn.casterText:SetPoint("LEFT", 93, 5)
     btn.casterText:SetJustifyH("LEFT")
-    btn.casterText:SetTextColor(0.7, 0.7, 0.7)
+    btn.casterText:SetTextColor(1, 0.8, 0)
 
-    -- Checkbox for completion
-    btn.checkBox = CreateFrame("CheckButton", nil, btn, "UICheckButtonTemplate")
-    btn.checkBox:SetSize(24, 24)
-    btn.checkBox:SetPoint("RIGHT", -140, 0)
+    -- Spell name (below)
+    btn.spellText = btn:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    btn.spellText:SetPoint("LEFT", 78, -10)
+    btn.spellText:SetJustifyH("LEFT")
+    btn.spellText:SetTextColor(0.7, 0.7, 0.7)
 
     -- Edit button
     btn.editButton = CreateFrame("Button", nil, btn, "UIPanelButtonTemplate")
@@ -389,7 +415,7 @@ function PlanUI.EditPlan(planName)
     if planViewerFrame then planViewerFrame:Hide() end
 
     planEditorFrame:Show()
-    planEditorFrame.titleText:SetText("Edit: " .. planName)
+    planEditorFrame.titleText:SetText(planName)
 
     PlanUI.RefreshPlanEditor()
 end
@@ -428,13 +454,62 @@ function PlanUI.RefreshPlanEditor()
 
         btn.orderText:SetText(step.order .. ".")
         btn.spellText:SetText(step.spellName)
-        btn.casterText:SetText(step.caster and ("by " .. step.caster) or "by Anyone")
+        btn.casterText:SetText(step.caster or "Anyone")
 
-        -- Checkbox
-        btn.checkBox:SetChecked(step.completed)
-        btn.checkBox:SetScript("OnClick", function(self)
-            RooMonk_PlanManager.MarkStepCompleted(currentPlan, i, self:GetChecked())
-        end)
+        -- Check if caster is available
+        local isAvailable = false
+        if not step.caster then
+            -- "Anyone" means always available
+            isAvailable = true
+        else
+            local casterName = step.caster
+            local playerName = UnitName("player")
+
+            -- Check if it's the player
+            if casterName == playerName then
+                isAvailable = true
+            elseif IsInRaid() then
+                -- Check raid members
+                for i = 1, GetNumGroupMembers() do
+                    if UnitName("raid" .. i) == casterName then
+                        isAvailable = true
+                        break
+                    end
+                end
+            elseif IsInGroup() then
+                -- Check party members
+                for i = 1, GetNumSubgroupMembers() do
+                    if UnitName("party" .. i) == casterName then
+                        isAvailable = true
+                        break
+                    end
+                end
+            end
+        end
+
+        -- Set availability icon
+        if isAvailable then
+            -- Green checkmark - using WoW's ready check icon
+            btn.availIcon:SetTexture("Interface\\RaidFrame\\ReadyCheck-Ready")
+        else
+            -- Red X - using WoW's ready check icon
+            btn.availIcon:SetTexture("Interface\\RaidFrame\\ReadyCheck-NotReady")
+        end
+
+        -- Set spell icon
+        local spellId = nil
+        for _, spell in ipairs(AVAILABLE_SPELLS) do
+            if spell.name == step.spellName then
+                spellId = spell.id
+                break
+            end
+        end
+        if spellId then
+            local texture = GetSpellTexture(spellId)
+            if texture then
+                btn.spellIcon:SetTexture(texture)
+            end
+        end
 
         -- Edit button
         btn.editButton:SetScript("OnClick", function()
@@ -449,28 +524,14 @@ function PlanUI.RefreshPlanEditor()
 
         -- Move up button
         btn.upButton:SetScript("OnClick", function()
-            if i > 1 then
-                local prevStep = plan.steps[i-1]
-                local tempOrder = step.order
-                step.order = prevStep.order
-                prevStep.order = tempOrder
-                RooMonk_PlanManager.UpdateStep(currentPlan, i, step.order, step.spellName, step.caster)
-                RooMonk_PlanManager.UpdateStep(currentPlan, i-1, prevStep.order, prevStep.spellName, prevStep.caster)
-                PlanUI.RefreshPlanEditor()
-            end
+            RooMonk_PlanManager.MoveStep(currentPlan, i, "up")
+            PlanUI.RefreshPlanEditor()
         end)
 
         -- Move down button
         btn.downButton:SetScript("OnClick", function()
-            if i < #plan.steps then
-                local nextStep = plan.steps[i+1]
-                local tempOrder = step.order
-                step.order = nextStep.order
-                nextStep.order = tempOrder
-                RooMonk_PlanManager.UpdateStep(currentPlan, i, step.order, step.spellName, step.caster)
-                RooMonk_PlanManager.UpdateStep(currentPlan, i+1, nextStep.order, nextStep.spellName, nextStep.caster)
-                PlanUI.RefreshPlanEditor()
-            end
+            RooMonk_PlanManager.MoveStep(currentPlan, i, "down")
+            PlanUI.RefreshPlanEditor()
         end)
 
         yOffset = yOffset + 55
@@ -482,57 +543,255 @@ end
 
 -- Show add step dialog
 function PlanUI.ShowAddStepDialog()
-    StaticPopupDialogs["ROOMONK_ADD_STEP"] = {
-        text = "Add Step\n\nSpell Name:",
-        button1 = "Add",
-        button2 = "Cancel",
-        hasEditBox = true,
-        OnShow = function(self)
-            local editBox = self.editBox or _G[self:GetName().."EditBox"]
-            if editBox then
-                editBox:SetText("")
+    -- Create custom dialog frame
+    local dialog = CreateFrame("Frame", "RooMonkAddStepDialog", UIParent, "BasicFrameTemplateWithInset")
+    dialog:SetSize(350, 220)
+    dialog:SetPoint("CENTER")
+    dialog:SetFrameStrata("DIALOG")
+    dialog:SetMovable(true)
+    dialog:EnableMouse(true)
+    dialog:RegisterForDrag("LeftButton")
+    dialog:SetScript("OnDragStart", function(self) self:StartMoving() end)
+    dialog:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+    dialog:SetClampedToScreen(true)
+
+    -- Title
+    dialog.title = dialog:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    dialog.title:SetPoint("TOP", 0, -5)
+    dialog.title:SetText("Add Step")
+
+    -- Caster name label
+    local casterLabel = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    casterLabel:SetPoint("TOPLEFT", 20, -35)
+    casterLabel:SetText("Caster Name:")
+
+    -- Caster name editbox
+    local casterEditBox = CreateFrame("EditBox", nil, dialog, "InputBoxTemplate")
+    casterEditBox:SetSize(250, 25)
+    casterEditBox:SetPoint("TOPLEFT", 20, -55)
+    casterEditBox:SetAutoFocus(false)
+    casterEditBox:SetMaxLetters(50)
+
+    -- Spell label
+    local spellLabel = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    spellLabel:SetPoint("TOPLEFT", 20, -90)
+    spellLabel:SetText("Spell:")
+
+    -- Spell dropdown
+    local spellDropdown = CreateFrame("Frame", "RooMonkSpellDropdown", dialog, "UIDropDownMenuTemplate")
+    spellDropdown:SetPoint("TOPLEFT", 5, -105)
+
+    local selectedSpell = AVAILABLE_SPELLS[1]
+
+    UIDropDownMenu_SetWidth(spellDropdown, 250)
+    UIDropDownMenu_Initialize(spellDropdown, function(self, level)
+        for _, spell in ipairs(AVAILABLE_SPELLS) do
+            local info = UIDropDownMenu_CreateInfo()
+            info.text = spell.name
+            info.value = spell
+            info.func = function(btn)
+                selectedSpell = btn.value
+                UIDropDownMenu_SetText(spellDropdown, btn.value.name)
             end
-        end,
-        OnAccept = function(self, data)
-            local editBox = self.editBox or _G[self:GetName().."EditBox"]
-            if editBox and currentPlan then
-                local spellName = editBox:GetText()
-                if spellName and spellName ~= "" then
-                    local plan = RooMonk_PlanManager.GetPlan(currentPlan)
-                    local nextOrder = plan and (#plan.steps + 1) or 1
-                    RooMonk_PlanManager.AddStep(currentPlan, nextOrder, spellName, nil)
-                    PlanUI.RefreshPlanEditor()
-                end
+
+            -- Add icon
+            local texture = GetSpellTexture(spell.id)
+            if texture then
+                info.icon = texture
+                info.tCoordLeft = 0.08
+                info.tCoordRight = 0.92
+                info.tCoordTop = 0.08
+                info.tCoordBottom = 0.92
             end
-        end,
-        timeout = 0,
-        whileDead = true,
-        hideOnEscape = true,
-        preferredIndex = 3,
-    }
-    StaticPopup_Show("ROOMONK_ADD_STEP")
+
+            UIDropDownMenu_AddButton(info, level)
+        end
+    end)
+
+    -- Set initial text
+    UIDropDownMenu_SetText(spellDropdown, AVAILABLE_SPELLS[1].name)
+
+    -- Add button
+    local addButton = CreateFrame("Button", nil, dialog, "UIPanelButtonTemplate")
+    addButton:SetSize(100, 25)
+    addButton:SetPoint("BOTTOMRIGHT", -20, 15)
+    addButton:SetText("Add")
+    addButton:SetScript("OnClick", function()
+        if currentPlan and selectedSpell then
+            local casterName = casterEditBox:GetText()
+            if casterName == "" then
+                casterName = nil
+            end
+            local plan = RooMonk_PlanManager.GetPlan(currentPlan)
+            local nextOrder = plan and (#plan.steps + 1) or 1
+            RooMonk_PlanManager.AddStep(currentPlan, nextOrder, selectedSpell.name, casterName)
+            PlanUI.RefreshPlanEditor()
+            dialog:Hide()
+        end
+    end)
+
+    -- Cancel button
+    local cancelButton = CreateFrame("Button", nil, dialog, "UIPanelButtonTemplate")
+    cancelButton:SetSize(100, 25)
+    cancelButton:SetPoint("RIGHT", addButton, "LEFT", -5, 0)
+    cancelButton:SetText("Cancel")
+    cancelButton:SetScript("OnClick", function()
+        dialog:Hide()
+    end)
+
+    -- Close button
+    dialog.CloseButton:SetScript("OnClick", function()
+        dialog:Hide()
+    end)
+
+    dialog:Show()
 end
 
 -- Show edit step dialog
 function PlanUI.ShowEditStepDialog(stepIndex, step)
-    StaticPopupDialogs["ROOMONK_EDIT_STEP"] = {
-        text = "Edit Step " .. stepIndex .. "\n\nSpell Name:",
-        button1 = "Save",
+    -- Create custom dialog frame
+    local dialog = CreateFrame("Frame", "RooMonkEditStepDialog", UIParent, "BasicFrameTemplateWithInset")
+    dialog:SetSize(350, 220)
+    dialog:SetPoint("CENTER")
+    dialog:SetFrameStrata("DIALOG")
+    dialog:SetMovable(true)
+    dialog:EnableMouse(true)
+    dialog:RegisterForDrag("LeftButton")
+    dialog:SetScript("OnDragStart", function(self) self:StartMoving() end)
+    dialog:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+    dialog:SetClampedToScreen(true)
+
+    -- Title
+    dialog.title = dialog:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    dialog.title:SetPoint("TOP", 0, -5)
+    dialog.title:SetText("Edit Step " .. stepIndex)
+
+    -- Caster name label
+    local casterLabel = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    casterLabel:SetPoint("TOPLEFT", 20, -35)
+    casterLabel:SetText("Caster Name:")
+
+    -- Caster name editbox
+    local casterEditBox = CreateFrame("EditBox", nil, dialog, "InputBoxTemplate")
+    casterEditBox:SetSize(250, 25)
+    casterEditBox:SetPoint("TOPLEFT", 20, -55)
+    casterEditBox:SetAutoFocus(false)
+    casterEditBox:SetMaxLetters(50)
+    casterEditBox:SetText(step.caster or "")
+
+    -- Spell label
+    local spellLabel = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    spellLabel:SetPoint("TOPLEFT", 20, -90)
+    spellLabel:SetText("Spell:")
+
+    -- Spell dropdown
+    local spellDropdown = CreateFrame("Frame", "RooMonkSpellDropdownEdit", dialog, "UIDropDownMenuTemplate")
+    spellDropdown:SetPoint("TOPLEFT", 5, -105)
+
+    -- Find current spell or default to first
+    local selectedSpell = {value = AVAILABLE_SPELLS[1]}
+    for _, spell in ipairs(AVAILABLE_SPELLS) do
+        if spell.name == step.spellName then
+            selectedSpell.value = spell
+            break
+        end
+    end
+
+    UIDropDownMenu_SetWidth(spellDropdown, 250)
+    UIDropDownMenu_Initialize(spellDropdown, function(self, level)
+        for _, spell in ipairs(AVAILABLE_SPELLS) do
+            local info = UIDropDownMenu_CreateInfo()
+            info.text = spell.name
+            info.value = spell
+            info.func = function(btn)
+                selectedSpell.value = btn.value
+                UIDropDownMenu_SetText(spellDropdown, btn.value.name)
+            end
+
+            -- Add checkmark for selected spell
+            info.checked = (spell.name == selectedSpell.value.name)
+
+            -- Add icon
+            local texture = GetSpellTexture(spell.id)
+            if texture then
+                info.icon = texture
+                info.tCoordLeft = 0.08
+                info.tCoordRight = 0.92
+                info.tCoordTop = 0.08
+                info.tCoordBottom = 0.92
+            end
+
+            UIDropDownMenu_AddButton(info, level)
+        end
+    end)
+
+    -- Set initial text
+    UIDropDownMenu_SetText(spellDropdown, selectedSpell.value.name)
+
+    -- Save button
+    local saveButton = CreateFrame("Button", nil, dialog, "UIPanelButtonTemplate")
+    saveButton:SetSize(100, 25)
+    saveButton:SetPoint("BOTTOMRIGHT", -20, 15)
+    saveButton:SetText("Save")
+    saveButton:SetScript("OnClick", function()
+        if currentPlan and selectedSpell.value then
+            local casterName = casterEditBox:GetText()
+            if casterName == "" then
+                casterName = nil
+            end
+            RooMonk_PlanManager.UpdateStep(currentPlan, stepIndex, step.order, selectedSpell.value.name, casterName)
+            PlanUI.RefreshPlanEditor()
+            dialog:Hide()
+        end
+    end)
+
+    -- Cancel button
+    local cancelButton = CreateFrame("Button", nil, dialog, "UIPanelButtonTemplate")
+    cancelButton:SetSize(100, 25)
+    cancelButton:SetPoint("RIGHT", saveButton, "LEFT", -5, 0)
+    cancelButton:SetText("Cancel")
+    cancelButton:SetScript("OnClick", function()
+        dialog:Hide()
+    end)
+
+    -- Close button
+    dialog.CloseButton:SetScript("OnClick", function()
+        dialog:Hide()
+    end)
+
+    dialog:Show()
+end
+
+-- Show rename plan dialog
+function PlanUI.ShowRenamePlanDialog()
+    if not currentPlan then
+        return
+    end
+
+    StaticPopupDialogs["ROOMONK_RENAME_PLAN"] = {
+        text = "Enter new name for plan '" .. currentPlan .. "':",
+        button1 = "Rename",
         button2 = "Cancel",
         hasEditBox = true,
         OnShow = function(self)
             local editBox = self.editBox or _G[self:GetName().."EditBox"]
             if editBox then
-                editBox:SetText(step.spellName)
+                editBox:SetText(currentPlan)
             end
         end,
         OnAccept = function(self, data)
             local editBox = self.editBox or _G[self:GetName().."EditBox"]
             if editBox and currentPlan then
-                local spellName = editBox:GetText()
-                if spellName and spellName ~= "" then
-                    RooMonk_PlanManager.UpdateStep(currentPlan, stepIndex, step.order, spellName, step.caster)
-                    PlanUI.RefreshPlanEditor()
+                local newName = editBox:GetText()
+                if newName and newName ~= "" and newName ~= currentPlan then
+                    local success, err = RooMonk_PlanManager.RenamePlan(currentPlan, newName)
+                    if success then
+                        currentPlan = newName
+                        planEditorFrame.titleText:SetText(newName)
+                        print("|cff00ff80RooMonk:|r Plan renamed to '" .. newName .. "'")
+                    else
+                        print("|cff00ff80RooMonk:|r " .. err)
+                    end
                 end
             end
         end,
@@ -541,7 +800,7 @@ function PlanUI.ShowEditStepDialog(stepIndex, step)
         hideOnEscape = true,
         preferredIndex = 3,
     }
-    StaticPopup_Show("ROOMONK_EDIT_STEP")
+    StaticPopup_Show("ROOMONK_RENAME_PLAN")
 end
 
 -- Share a plan

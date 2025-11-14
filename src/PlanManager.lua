@@ -93,6 +93,12 @@ function PlanManager.RemoveStep(planName, stepIndex)
     end
 
     table.remove(plan.steps, stepIndex)
+
+    -- Renumber all steps
+    for i, step in ipairs(plan.steps) do
+        step.order = i
+    end
+
     plan.modified = time()
     return true
 end
@@ -134,6 +140,46 @@ function PlanManager.MarkStepCompleted(planName, stepIndex, completed)
     end
 
     plan.steps[stepIndex].completed = completed
+    return true
+end
+
+-- Move a step up or down in the plan
+function PlanManager.MoveStep(planName, stepIndex, direction)
+    local plan = savedPlans[planName]
+    if not plan then
+        return false, "Plan not found"
+    end
+
+    if stepIndex < 1 or stepIndex > #plan.steps then
+        return false, "Invalid step index"
+    end
+
+    local targetIndex
+    if direction == "up" then
+        if stepIndex == 1 then
+            return false, "Already at top"
+        end
+        targetIndex = stepIndex - 1
+    elseif direction == "down" then
+        if stepIndex == #plan.steps then
+            return false, "Already at bottom"
+        end
+        targetIndex = stepIndex + 1
+    else
+        return false, "Invalid direction"
+    end
+
+    -- Swap the steps
+    local temp = plan.steps[stepIndex]
+    plan.steps[stepIndex] = plan.steps[targetIndex]
+    plan.steps[targetIndex] = temp
+
+    -- Renumber all steps
+    for i, step in ipairs(plan.steps) do
+        step.order = i
+    end
+
+    plan.modified = time()
     return true
 end
 

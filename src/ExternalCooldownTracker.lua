@@ -12,7 +12,7 @@ local TRACKED_COOLDOWNS = {
     {spellId = 102342, name = "Ironbark", duration = 12, cooldownDuration = 60, class = "DRUID", trackType = "buff"},
 
     -- Paladin (Holy)
-    {spellId = 31821, name = "Aura Mastery", duration = 6, cooldownDuration = 180, class = "PALADIN", trackType = "buff"},
+    {spellId = 31821, name = "Devotion Aura", duration = 6, cooldownDuration = 180, class = "PALADIN", trackType = "buff"},
     {spellId = 6940, name = "Hand of Sacrifice", duration = 12, cooldownDuration = 120, class = "PALADIN", trackType = "buff"},
     {spellId = 1022, name = "Hand of Protection", duration = 10, cooldownDuration = 300, class = "PALADIN", trackType = "buff"},
 
