@@ -12,9 +12,7 @@ local UPLIFT_SPELL_ID = 116670 -- Uplift spell ID for MoP
 
 -- Frame variables
 local frame = nil
-local countText = nil
 local upliftText = nil
-local listFrame = nil
 
 -- Check if a unit has Renewing Mist buff
 local function HasRenewingMist(unit)
@@ -22,11 +20,10 @@ local function HasRenewingMist(unit)
 
     -- Check all buffs on the unit
     for i = 1, 40 do
-        local name, _, _, _, _, _, _, _, _, spellId = UnitBuff(unit, i)
+        local name, _, _, _, _, expirationTime, _, _, _, spellId = UnitBuff(unit, i)
         if not name then break end
 
         if spellId == RENEWING_MIST_SPELL_ID then
-            local _, _, _, _, _, expirationTime = UnitBuff(unit, i)
             local timeRemaining = expirationTime and (expirationTime - GetTime()) or 0
             return true, timeRemaining
         end
@@ -88,37 +85,6 @@ local function GetRenewingMistTargets()
     return targets, totalMembers
 end
 
--- Create a frame to list players with Renewing Mist
-local function CreateListFrame(parentFrame, db)
-    listFrame = CreateFrame("Frame", "RooMonkListFrame", parentFrame)
-    listFrame:SetSize(180, 200)
-    listFrame:SetPoint("TOP", parentFrame, "BOTTOM", 0, -5)
-
-    -- Create backdrop texture
-    local bg = listFrame:CreateTexture(nil, "BACKGROUND")
-    bg:SetAllPoints()
-    bg:SetColorTexture(0, 0, 0, 0.8)
-
-    listFrame.fontStrings = {}
-
-    -- Create font strings for player names
-    for i = 1, 10 do
-        local fs = listFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        fs:SetPoint("TOPLEFT", 15, -10 - (i - 1) * 18)
-        fs:SetJustifyH("LEFT")
-        fs:SetTextColor(1, 1, 1)
-        listFrame.fontStrings[i] = fs
-    end
-
-    if db.showRenewingMist then
-        listFrame:Show()
-    else
-        listFrame:Hide()
-    end
-
-    return listFrame
-end
-
 -- Initialize the main frame
 local function CreateRenewingMistFrame(parentFrame, db)
     frame = parentFrame
@@ -131,32 +97,48 @@ local function CreateRenewingMistFrame(parentFrame, db)
     bg:SetColorTexture(0, 0, 0, 0.8)
     frame.bg = bg
 
-    -- Icon
-    local icon = frame:CreateTexture(nil, "ARTWORK")
-    icon:SetSize(32, 32)
-    icon:SetPoint("LEFT", 10, 0)
-    icon:SetTexture(GetSpellTexture(RENEWING_MIST_SPELL_ID))
-
-    -- Title text
+    -- Title text (headline at top)
     local titleText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    titleText:SetPoint("TOPLEFT", 50, -10)
+    titleText:SetPoint("TOP", 0, -10)
     titleText:SetText("Renewing Mist")
     titleText:SetTextColor(0, 1, 0.5)
 
-    -- Count text
-    countText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    countText:SetPoint("TOPLEFT", 50, -28)
-    countText:SetText("0/0")
-    countText:SetTextColor(1, 1, 1)
+    -- Icon
+    local icon = frame:CreateTexture(nil, "ARTWORK")
+    icon:SetSize(32, 32)
+    icon:SetPoint("TOPLEFT", 10, -30)
+    icon:SetTexture(GetSpellTexture(RENEWING_MIST_SPELL_ID))
 
-    -- Uplift info text
-    upliftText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    upliftText:SetPoint("TOPLEFT", 50, -50)
-    upliftText:SetText("Uplift: 0 targets")
+    -- Uplift info text (aligned with icon)
+    upliftText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    upliftText:SetPoint("LEFT", icon, "RIGHT", 8, 0)
+    upliftText:SetText("0 targets")
     upliftText:SetTextColor(0.7, 0.7, 0.7)
 
-    -- Create list frame
-    listFrame = CreateListFrame(frame, db)
+    -- Create list items with progress bars (integrated into main frame)
+    frame.listFontStrings = {}
+    frame.listBars = {}
+    for i = 1, 10 do
+        -- Create bar background
+        local barBg = frame:CreateTexture(nil, "BACKGROUND")
+        barBg:SetSize(180, 16)
+        barBg:SetPoint("TOPLEFT", 10, -70 - (i - 1) * 18)
+        barBg:SetColorTexture(0.1, 0.1, 0.1, 0.8)
+
+        -- Create progress bar
+        local bar = frame:CreateTexture(nil, "ARTWORK")
+        bar:SetSize(180, 16)
+        bar:SetPoint("TOPLEFT", 10, -70 - (i - 1) * 18)
+        bar:SetColorTexture(0, 1, 0, 0.5)
+        frame.listBars[i] = {bg = barBg, progress = bar}
+
+        -- Create text overlay
+        local fs = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        fs:SetPoint("LEFT", barBg, "LEFT", 5, 0)
+        fs:SetJustifyH("LEFT")
+        fs:SetTextColor(1, 1, 1)
+        frame.listFontStrings[i] = fs
+    end
 
     return frame
 end
@@ -164,31 +146,15 @@ end
 -- Update the display
 local function UpdateDisplay(db)
     -- Don't update if frame isn't initialized yet
-    if not countText then
+    if not upliftText then
         return
     end
     local targets, totalMembers = GetRenewingMistTargets()
     local count = #targets
 
-    -- Update count text
-    countText:SetText(count .. "/" .. totalMembers)
-
-    -- Color code based on coverage
-    if totalMembers == 0 then
-        countText:SetTextColor(1, 1, 1)
-    elseif count == 0 then
-        countText:SetTextColor(0.5, 0.5, 0.5)
-    elseif count / totalMembers >= 0.7 then
-        countText:SetTextColor(0, 1, 0)
-    elseif count / totalMembers >= 0.4 then
-        countText:SetTextColor(1, 1, 0)
-    else
-        countText:SetTextColor(1, 0.5, 0)
-    end
-
     -- Update Uplift info
     if upliftText then
-        upliftText:SetText("Uplift: " .. count .. " targets")
+        upliftText:SetText(count .. " targets")
 
         -- Highlight when 3+ targets (optimal Uplift time)
         if count >= 3 then
@@ -205,45 +171,72 @@ local function UpdateDisplay(db)
         end
     end
 
-    -- Update list
-    if listFrame and listFrame.fontStrings and db.showRenewingMist then
+    -- Update integrated list
+    if frame and frame.listFontStrings and frame.listBars and db.showRenewingMist then
+        local maxDuration = 18 -- Renewing Mist duration in MoP
         for i = 1, 10 do
-            if listFrame.fontStrings[i] then
+            if frame.listFontStrings[i] and frame.listBars[i] then
                 if targets[i] then
                     local timeStr = string.format("%.1fs", targets[i].timeLeft)
-                    listFrame.fontStrings[i]:SetText(targets[i].name .. " - " .. timeStr)
+                    frame.listFontStrings[i]:SetText(targets[i].name .. " - " .. timeStr)
 
-                    -- Color based on time remaining
+                    -- Show bars
+                    frame.listBars[i].bg:Show()
+                    frame.listBars[i].progress:Show()
+
+                    -- Update progress bar width based on time remaining
+                    local progress = math.max(0, math.min(1, targets[i].timeLeft / maxDuration))
+                    frame.listBars[i].progress:SetWidth(180 * progress)
+
+                    -- Color bar based on time remaining
                     if targets[i].timeLeft <= 3 then
-                        listFrame.fontStrings[i]:SetTextColor(1, 0, 0)
+                        frame.listBars[i].progress:SetColorTexture(1, 0, 0, 0.6)
+                        frame.listFontStrings[i]:SetTextColor(1, 1, 1)
                     elseif targets[i].timeLeft > 10 then
-                        listFrame.fontStrings[i]:SetTextColor(0, 1, 0)
+                        frame.listBars[i].progress:SetColorTexture(0, 1, 0, 0.6)
+                        frame.listFontStrings[i]:SetTextColor(1, 1, 1)
                     elseif targets[i].timeLeft > 5 then
-                        listFrame.fontStrings[i]:SetTextColor(1, 1, 0)
+                        frame.listBars[i].progress:SetColorTexture(1, 1, 0, 0.6)
+                        frame.listFontStrings[i]:SetTextColor(1, 1, 1)
                     else
-                        listFrame.fontStrings[i]:SetTextColor(1, 0.5, 0)
+                        frame.listBars[i].progress:SetColorTexture(1, 0.5, 0, 0.6)
+                        frame.listFontStrings[i]:SetTextColor(1, 1, 1)
                     end
                 else
-                    listFrame.fontStrings[i]:SetText("")
+                    frame.listFontStrings[i]:SetText("")
+                    frame.listBars[i].bg:Hide()
+                    frame.listBars[i].progress:Hide()
                 end
             end
         end
 
-        -- Adjust list frame height based on number of targets
-        local height = math.max(40, math.min(count, 10) * 18 + 20)
-        listFrame:SetHeight(height)
+        -- Adjust main frame height based on number of targets
+        local baseHeight = 80
+        local listHeight = math.min(count, 10) * 18
+        frame:SetHeight(baseHeight + listHeight)
+    else
+        -- Hide list entries when not showing
+        if frame and frame.listFontStrings and frame.listBars then
+            for i = 1, 10 do
+                if frame.listFontStrings[i] then
+                    frame.listFontStrings[i]:SetText("")
+                end
+                if frame.listBars[i] then
+                    frame.listBars[i].bg:Hide()
+                    frame.listBars[i].progress:Hide()
+                end
+            end
+        end
+        -- Reset to base height
+        if frame then
+            frame:SetHeight(80)
+        end
     end
-end
-
--- Get list frame reference
-local function GetListFrame()
-    return listFrame
 end
 
 -- Export functions
 RooMonk_RenewingMistTracker = {
     CreateRenewingMistFrame = CreateRenewingMistFrame,
     UpdateDisplay = UpdateDisplay,
-    GetListFrame = GetListFrame,
     GetRenewingMistTargets = GetRenewingMistTargets
 }

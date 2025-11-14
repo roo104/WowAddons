@@ -19,7 +19,7 @@ local TRACKED_COOLDOWNS = {
     {spellId = 31842, name = "Avenging Wrath", duration = 20, cooldownDuration = 180, class = "PALADIN", trackType = "buff"},
 
     -- Priest (Holy/Disc)
-    {spellId = 62618, name = "Power Word: Barrier", duration = 10, cooldownDuration = 180, class = "PRIEST", trackType = "buff"},
+    {spellId = 62618, name = "Power Word: Barrier", duration = 10, cooldownDuration = 180, class = "PRIEST", trackType = "cast"},
     {spellId = 64843, name = "Divine Hymn", duration = 8, cooldownDuration = 180, class = "PRIEST", trackType = "cast"},
     {spellId = 47788, name = "Guardian Spirit", duration = 10, cooldownDuration = 180, class = "PRIEST", trackType = "buff"},
     {spellId = 33206, name = "Pain Suppression", duration = 8, cooldownDuration = 180, class = "PRIEST", trackType = "buff"},

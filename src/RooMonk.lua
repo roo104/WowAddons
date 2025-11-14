@@ -9,7 +9,6 @@ local ADDON_NAME = "RooMonk"
 -- Frame variables
 local frame = CreateFrame("Frame", "RooMonkFrame", UIParent)
 local renewingMistFrame = nil
-local listFrame = nil
 local statueFrame = nil
 local cooldownFrame = nil
 local updateTimer = 0
@@ -25,7 +24,8 @@ RooMonkCharDB = RooMonkCharDB or {
     y = -100,
     cooldownX = nil,
     cooldownY = nil,
-    activeCooldowns = {}
+    activeCooldowns = {},
+    plans = {}
 }
 
 -- Initialize the main frame
@@ -55,7 +55,6 @@ local function InitializeFrame()
     -- Create Renewing Mist tracking frame using external module
     if RooMonk_RenewingMistTracker then
         renewingMistFrame = RooMonk_RenewingMistTracker.CreateRenewingMistFrame(frame, RooMonkCharDB)
-        listFrame = RooMonk_RenewingMistTracker.GetListFrame()
     end
 
     -- Create statue frame using external module
@@ -92,6 +91,15 @@ local function OnEvent(self, event, ...)
     if event == "PLAYER_LOGIN" then
         InitializeFrame()
         UpdateDisplay()
+
+        -- Initialize addon communication and plan manager
+        if RooMonk_AddonComm then
+            RooMonk_AddonComm.Initialize()
+        end
+
+        if RooMonk_PlanManager then
+            RooMonk_PlanManager.Initialize(RooMonkCharDB)
+        end
     elseif event == "UNIT_AURA" or event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_ENTERING_WORLD" then
         UpdateDisplay()
     end
@@ -114,34 +122,42 @@ frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:SetScript("OnEvent", OnEvent)
 frame:SetScript("OnUpdate", OnUpdate)
 
+-- Helper function to parse slash command arguments
+local function ParseArgs(msg)
+    local args = {}
+    for word in string.gmatch(msg, "[^%s]+") do
+        table.insert(args, word)
+    end
+    return args
+end
+
 -- Slash commands
 SLASH_ROOMONK1 = "/roomonk"
 SLASH_ROOMONK2 = "/rm"
 SlashCmdList["ROOMONK"] = function(msg)
-    msg = string.lower(msg or "")
+    local args = ParseArgs(msg)
+    local cmd = args[1] and string.lower(args[1]) or ""
 
-    if msg == "lock" then
+    if cmd == "lock" then
         RooMonkCharDB.locked = true
         print("|cff00ff80RooMonk:|r Frame locked")
-    elseif msg == "unlock" then
+    elseif cmd == "unlock" then
         RooMonkCharDB.locked = false
         print("|cff00ff80RooMonk:|r Frame unlocked")
-    elseif msg == "mist" or msg == "renewing" then
+    elseif cmd == "mist" or cmd == "renewing" then
         RooMonkCharDB.showRenewingMist = not RooMonkCharDB.showRenewingMist
-        if renewingMistFrame and listFrame then
+        if renewingMistFrame then
             if RooMonkCharDB.showRenewingMist then
                 renewingMistFrame:Show()
-                listFrame:Show()
                 print("|cff00ff80RooMonk:|r Renewing Mist tracker shown")
             else
                 renewingMistFrame:Hide()
-                listFrame:Hide()
                 print("|cff00ff80RooMonk:|r Renewing Mist tracker hidden")
             end
         else
             print("|cff00ff80RooMonk:|r Renewing Mist tracker not available for this class")
         end
-    elseif msg == "statue" then
+    elseif cmd == "statue" then
         RooMonkCharDB.showStatue = not RooMonkCharDB.showStatue
         if statueFrame then
             if RooMonkCharDB.showStatue then
@@ -154,7 +170,7 @@ SlashCmdList["ROOMONK"] = function(msg)
         else
             print("|cff00ff80RooMonk:|r Statue tracker not available for this class")
         end
-    elseif msg == "cooldowns" or msg == "cds" then
+    elseif cmd == "cooldowns" or cmd == "cds" then
         RooMonkCharDB.showCooldowns = not RooMonkCharDB.showCooldowns
         if RooMonk_ExternalCooldownTracker then
             local shown = RooMonk_ExternalCooldownTracker.ToggleFrame()
@@ -164,13 +180,108 @@ SlashCmdList["ROOMONK"] = function(msg)
                 print("|cff00ff80RooMonk:|r Cooldown tracker hidden")
             end
         end
-    elseif msg == "reset" then
+    elseif cmd == "reset" then
         RooMonkCharDB.x = 100
         RooMonkCharDB.y = -100
         frame:ClearAllPoints()
         frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", RooMonkCharDB.x, RooMonkCharDB.y)
         print("|cff00ff80RooMonk:|r Position reset")
-    elseif msg == "help" or msg == "" then
+
+    -- Plan management commands
+    elseif cmd == "plan" or cmd == "plans" then
+        if RooMonk_PlanUI then
+            RooMonk_PlanUI.Toggle()
+        else
+            print("|cff00ff80RooMonk:|r Plan UI not available")
+        end
+    elseif cmd == "newplan" then
+        local planName = table.concat(args, " ", 2)
+        if planName and planName ~= "" and RooMonk_PlanManager then
+            local plan, err = RooMonk_PlanManager.CreatePlan(planName)
+            if plan then
+                print("|cff00ff80RooMonk:|r Created plan: " .. planName)
+            else
+                print("|cff00ff80RooMonk:|r " .. err)
+            end
+        else
+            print("|cff00ff80RooMonk:|r Usage: /rm newplan <planName>")
+        end
+    elseif cmd == "addstep" then
+        -- /rm addstep <planName> <order> <spellName> [caster]
+        if #args >= 4 and RooMonk_PlanManager then
+            local planName = args[2]
+            local order = tonumber(args[3])
+            local spellName = args[4]
+            local caster = args[5]
+
+            if RooMonk_PlanManager.AddStep(planName, order, spellName, caster) then
+                print("|cff00ff80RooMonk:|r Added step to plan: " .. planName)
+            else
+                print("|cff00ff80RooMonk:|r Failed to add step")
+            end
+        else
+            print("|cff00ff80RooMonk:|r Usage: /rm addstep <planName> <order> <spellName> [caster]")
+        end
+    elseif cmd == "shareplan" then
+        local planName = table.concat(args, " ", 2)
+        if planName and planName ~= "" and RooMonk_PlanManager and RooMonk_AddonComm then
+            local exportData = RooMonk_PlanManager.ExportPlan(planName)
+            if exportData then
+                RooMonk_AddonComm.SharePlan(exportData)
+            else
+                print("|cff00ff80RooMonk:|r Plan not found: " .. planName)
+            end
+        else
+            print("|cff00ff80RooMonk:|r Usage: /rm shareplan <planName>")
+        end
+    elseif cmd == "requestplans" then
+        if RooMonk_AddonComm then
+            RooMonk_AddonComm.RequestPlans()
+        else
+            print("|cff00ff80RooMonk:|r Addon communication not available")
+        end
+    elseif cmd == "viewplan" or cmd == "received" then
+        if RooMonk_AddonComm then
+            local receivedPlans = RooMonk_AddonComm.GetReceivedPlans()
+            if next(receivedPlans) then
+                print("|cff00ff80RooMonk - Received Plans:|r")
+                for sender, plans in pairs(receivedPlans) do
+                    print("  From " .. sender .. ":")
+                    for planName, plan in pairs(plans) do
+                        print("    - " .. planName .. " (" .. #plan.steps .. " steps)")
+                        for i, step in ipairs(plan.steps) do
+                            local casterText = step.caster and (" by " .. step.caster) or ""
+                            print("      " .. step.order .. ". " .. step.spellName .. casterText)
+                        end
+                    end
+                end
+            else
+                print("|cff00ff80RooMonk:|r No plans received yet")
+            end
+        else
+            print("|cff00ff80RooMonk:|r Addon communication not available")
+        end
+    elseif cmd == "listplans" then
+        if RooMonk_PlanManager then
+            local plans = RooMonk_PlanManager.GetAllPlans()
+            if next(plans) then
+                print("|cff00ff80RooMonk - My Plans:|r")
+                for planName, plan in pairs(plans) do
+                    local summary = RooMonk_PlanManager.GetPlanSummary(planName)
+                    print("  " .. planName .. " (" .. summary.stepCount .. " steps)")
+                    for i, step in ipairs(plan.steps) do
+                        local casterText = step.caster and (" by " .. step.caster) or ""
+                        local status = step.completed and "[X]" or "[ ]"
+                        print("    " .. status .. " " .. step.order .. ". " .. step.spellName .. casterText)
+                    end
+                end
+            else
+                print("|cff00ff80RooMonk:|r No plans created yet")
+            end
+        else
+            print("|cff00ff80RooMonk:|r Plan manager not available")
+        end
+    elseif cmd == "help" or cmd == "" then
         print("|cff00ff80RooMonk Commands:|r")
         print("  /rm lock - Lock the frame")
         print("  /rm unlock - Unlock the frame")
@@ -178,6 +289,15 @@ SlashCmdList["ROOMONK"] = function(msg)
         print("  /rm statue - Toggle statue tracker")
         print("  /rm cooldowns (or cds) - Toggle cooldown tracker")
         print("  /rm reset - Reset position")
+        print("  ")
+        print("|cff00ff80Plan Management:|r")
+        print("  /rm plan - Open plan manager UI")
+        print("  /rm newplan <name> - Create a new plan")
+        print("  /rm listplans - List all your plans")
+        print("  /rm addstep <plan> <order> <spell> [caster] - Add step to plan")
+        print("  /rm shareplan <name> - Share plan with group")
+        print("  /rm requestplans - Request plans from group")
+        print("  /rm viewplan - View received plans")
         print("  /rm help - Show this help")
     else
         print("|cff00ff80RooMonk:|r Unknown command. Type /rm help for commands.")

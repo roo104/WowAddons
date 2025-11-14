@@ -2,10 +2,18 @@
 ## Title: RooMonk - Renewing Mist Tracker
 ## Notes: Tracks Renewing Mist on party and raid members for Mistweaver Monks
 ## Author: Jonas
-## Version: 1.0.0
+## Version: 1.1.0
 ## SavedVariablesPerCharacter: RooMonkCharDB
 
+# Core modules
 RenewingMistTracker.lua
 JadeSerpentTracker.lua
 ExternalCooldownTracker.lua
+
+# Communication and plan management
+AddonComm.lua
+PlanManager.lua
+PlanUI.lua
+
+# Main addon file
 RooMonk.lua
