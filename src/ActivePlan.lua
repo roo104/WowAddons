@@ -14,6 +14,7 @@ local db = nil
 
 -- Available spells for icon lookup with cooldown info
 local AVAILABLE_SPELLS = {
+    {id = 51052, name = "Anti-Magic Zone", duration = 10, cooldownDuration = 120},
     {id = 31842, name = "Devotion Aura", duration = 6, cooldownDuration = 180},
     {id = 64843, name = "Divine Hymn", duration = 8, cooldownDuration = 180},
     {id = 108280, name = "Healing Tide Totem", duration = 10, cooldownDuration = 180},

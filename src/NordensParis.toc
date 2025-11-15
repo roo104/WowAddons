@@ -6,6 +6,7 @@
 ## SavedVariablesPerCharacter: NordensParisCharDB
 
 # Core modules
+Utils.lua
 RenewingMistTracker.lua
 JadeSerpentTracker.lua
 ExternalCooldownTracker.lua

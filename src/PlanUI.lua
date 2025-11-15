@@ -13,6 +13,7 @@ local currentPlan = nil
 
 -- Available spells for dropdown
 local AVAILABLE_SPELLS = {
+    {id = 51052, name = "Anti-Magic Zone"},
     {id = 31842, name = "Devotion Aura"},
     {id = 64843, name = "Divine Hymn"},
     {id = 108280, name = "Healing Tide Totem"},
@@ -595,12 +596,99 @@ function PlanUI.ShowAddStepDialog()
     casterLabel:SetPoint("TOPLEFT", 20, -35)
     casterLabel:SetText("Caster Name:")
 
-    -- Caster name editbox
+    -- Caster name editbox with autocomplete
     local casterEditBox = CreateFrame("EditBox", nil, dialog, "InputBoxTemplate")
     casterEditBox:SetSize(250, 25)
     casterEditBox:SetPoint("TOPLEFT", 20, -55)
     casterEditBox:SetAutoFocus(false)
     casterEditBox:SetMaxLetters(50)
+
+    -- Create autocomplete dropdown
+    local autocompleteFrame = CreateFrame("Frame", nil, dialog)
+    autocompleteFrame:SetSize(250, 80)
+    autocompleteFrame:SetPoint("TOPLEFT", casterEditBox, "BOTTOMLEFT", 0, -2)
+    autocompleteFrame:SetFrameStrata("TOOLTIP")
+    autocompleteFrame:Hide()
+
+    local autocompleteBg = autocompleteFrame:CreateTexture(nil, "BACKGROUND")
+    autocompleteBg:SetAllPoints()
+    autocompleteBg:SetColorTexture(0, 0, 0, 0.9)
+
+    -- Autocomplete buttons
+    local autocompleteButtons = {}
+    for i = 1, 4 do
+        local btn = CreateFrame("Button", nil, autocompleteFrame)
+        btn:SetSize(250, 20)
+        btn:SetPoint("TOPLEFT", 0, -(i-1) * 20)
+
+        btn.text = btn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        btn.text:SetPoint("LEFT", 5, 0)
+        btn.text:SetJustifyH("LEFT")
+
+        btn.highlight = btn:CreateTexture(nil, "HIGHLIGHT")
+        btn.highlight:SetAllPoints()
+        btn.highlight:SetColorTexture(0.3, 0.3, 0.8, 0.5)
+
+        btn:SetScript("OnClick", function(self)
+            casterEditBox:SetText(self.text:GetText())
+            autocompleteFrame:Hide()
+        end)
+
+        btn:Hide()
+        autocompleteButtons[i] = btn
+    end
+
+    -- Function to update autocomplete suggestions
+    local function UpdateAutocomplete(text)
+        if not text or text == "" then
+            autocompleteFrame:Hide()
+            return
+        end
+
+        local members = NordensParis_Utils.GetGroupMembers()
+        local matches = {}
+        local lowerText = string.lower(text)
+
+        for _, name in ipairs(members) do
+            if string.find(string.lower(name), lowerText, 1, true) then
+                table.insert(matches, name)
+            end
+        end
+
+        if #matches == 0 then
+            autocompleteFrame:Hide()
+            return
+        end
+
+        -- Update buttons
+        for i = 1, 4 do
+            if matches[i] then
+                autocompleteButtons[i].text:SetText(matches[i])
+                autocompleteButtons[i]:Show()
+            else
+                autocompleteButtons[i]:Hide()
+            end
+        end
+
+        autocompleteFrame:Show()
+    end
+
+    casterEditBox:SetScript("OnTextChanged", function(self)
+        UpdateAutocomplete(self:GetText())
+    end)
+
+    casterEditBox:SetScript("OnEditFocusLost", function(self)
+        -- Delay hide to allow button clicks
+        C_Timer.After(0.2, function()
+            autocompleteFrame:Hide()
+        end)
+    end)
+
+    casterEditBox:SetScript("OnEditFocusGained", function(self)
+        if self:GetText() ~= "" then
+            UpdateAutocomplete(self:GetText())
+        end
+    end)
 
     -- Spell label
     local spellLabel = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -701,13 +789,100 @@ function PlanUI.ShowEditStepDialog(stepIndex, step)
     casterLabel:SetPoint("TOPLEFT", 20, -35)
     casterLabel:SetText("Caster Name:")
 
-    -- Caster name editbox
+    -- Caster name editbox with autocomplete
     local casterEditBox = CreateFrame("EditBox", nil, dialog, "InputBoxTemplate")
     casterEditBox:SetSize(250, 25)
     casterEditBox:SetPoint("TOPLEFT", 20, -55)
     casterEditBox:SetAutoFocus(false)
     casterEditBox:SetMaxLetters(50)
     casterEditBox:SetText(step.caster or "")
+
+    -- Create autocomplete dropdown
+    local autocompleteFrame = CreateFrame("Frame", nil, dialog)
+    autocompleteFrame:SetSize(250, 80)
+    autocompleteFrame:SetPoint("TOPLEFT", casterEditBox, "BOTTOMLEFT", 0, -2)
+    autocompleteFrame:SetFrameStrata("TOOLTIP")
+    autocompleteFrame:Hide()
+
+    local autocompleteBg = autocompleteFrame:CreateTexture(nil, "BACKGROUND")
+    autocompleteBg:SetAllPoints()
+    autocompleteBg:SetColorTexture(0, 0, 0, 0.9)
+
+    -- Autocomplete buttons
+    local autocompleteButtons = {}
+    for i = 1, 4 do
+        local btn = CreateFrame("Button", nil, autocompleteFrame)
+        btn:SetSize(250, 20)
+        btn:SetPoint("TOPLEFT", 0, -(i-1) * 20)
+
+        btn.text = btn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        btn.text:SetPoint("LEFT", 5, 0)
+        btn.text:SetJustifyH("LEFT")
+
+        btn.highlight = btn:CreateTexture(nil, "HIGHLIGHT")
+        btn.highlight:SetAllPoints()
+        btn.highlight:SetColorTexture(0.3, 0.3, 0.8, 0.5)
+
+        btn:SetScript("OnClick", function(self)
+            casterEditBox:SetText(self.text:GetText())
+            autocompleteFrame:Hide()
+        end)
+
+        btn:Hide()
+        autocompleteButtons[i] = btn
+    end
+
+    -- Function to update autocomplete suggestions
+    local function UpdateAutocomplete(text)
+        if not text or text == "" then
+            autocompleteFrame:Hide()
+            return
+        end
+
+        local members = NordensParis_Utils.GetGroupMembers()
+        local matches = {}
+        local lowerText = string.lower(text)
+
+        for _, name in ipairs(members) do
+            if string.find(string.lower(name), lowerText, 1, true) then
+                table.insert(matches, name)
+            end
+        end
+
+        if #matches == 0 then
+            autocompleteFrame:Hide()
+            return
+        end
+
+        -- Update buttons
+        for i = 1, 4 do
+            if matches[i] then
+                autocompleteButtons[i].text:SetText(matches[i])
+                autocompleteButtons[i]:Show()
+            else
+                autocompleteButtons[i]:Hide()
+            end
+        end
+
+        autocompleteFrame:Show()
+    end
+
+    casterEditBox:SetScript("OnTextChanged", function(self)
+        UpdateAutocomplete(self:GetText())
+    end)
+
+    casterEditBox:SetScript("OnEditFocusLost", function(self)
+        -- Delay hide to allow button clicks
+        C_Timer.After(0.2, function()
+            autocompleteFrame:Hide()
+        end)
+    end)
+
+    casterEditBox:SetScript("OnEditFocusGained", function(self)
+        if self:GetText() ~= "" then
+            UpdateAutocomplete(self:GetText())
+        end
+    end)
 
     -- Spell label
     local spellLabel = dialog:CreateFontString(nil, "OVERLAY", "GameFontNormal")
