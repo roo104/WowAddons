@@ -14,11 +14,14 @@ local db = nil
 
 -- Available spells for icon lookup with cooldown info
 local AVAILABLE_SPELLS = {
-    {id = 740, name = "Tranquility", duration = 8, cooldownDuration = 180},
-    {id = 115310, name = "Revival", duration = 0, cooldownDuration = 180},
+    {id = 31842, name = "Devotion Aura", duration = 6, cooldownDuration = 180},
+    {id = 64843, name = "Divine Hymn", duration = 8, cooldownDuration = 180},
     {id = 108280, name = "Healing Tide Totem", duration = 10, cooldownDuration = 180},
     {id = 62618, name = "Power Word: Barrier", duration = 10, cooldownDuration = 180},
-    {id = 31842, name = "Devotion Aura", duration = 6, cooldownDuration = 180},
+    {id = 97462, name = "Rallying Cry", duration = 10, cooldownDuration = 180},
+    {id = 115310, name = "Revival", duration = 0, cooldownDuration = 180},
+    {id = 76577, name = "Smoke Bomb", duration = 5, cooldownDuration = 180},
+    {id = 740, name = "Tranquility", duration = 8, cooldownDuration = 180},
 }
 
 -- Create spell ID to info lookup
@@ -341,6 +344,11 @@ function ActivePlan.Refresh()
 
     -- Update scroll child height
     scrollChild:SetHeight(math.max(yOffset, 1))
+
+    -- Resize frame to fit content (with padding for title and borders)
+    local numSteps = #sortedSteps
+    local frameHeight = math.max(80, 30 + (numSteps * 45) + 10)  -- 30 for title, 45 per step, 10 for bottom padding
+    viewerFrame:SetHeight(frameHeight)
 
     -- Hide scrollbar if content fits
     local scrollBar = viewerFrame.scrollFrame.ScrollBar

@@ -13,11 +13,14 @@ local currentPlan = nil
 
 -- Available spells for dropdown
 local AVAILABLE_SPELLS = {
-    {id = 740, name = "Tranquility"},
-    {id = 115310, name = "Revival"},
+    {id = 31842, name = "Devotion Aura"},
+    {id = 64843, name = "Divine Hymn"},
     {id = 108280, name = "Healing Tide Totem"},
     {id = 62618, name = "Power Word: Barrier"},
-    {id = 31842, name = "Devotion Aura"},
+    {id = 97462, name = "Rallying Cry"},
+    {id = 115310, name = "Revival"},
+    {id = 76577, name = "Smoke Bomb"},
+    {id = 740, name = "Tranquility"},
 }
 
 -- Colors
@@ -397,16 +400,14 @@ local function CreateStepButton(index)
     btn.deleteButton:SetText("Del")
 
     -- Move up button
-    btn.upButton = CreateFrame("Button", nil, btn, "UIPanelButtonTemplate")
+    btn.upButton = CreateFrame("Button", nil, btn, "UIPanelScrollUpButtonTemplate")
     btn.upButton:SetSize(20, 20)
     btn.upButton:SetPoint("RIGHT", -180, 10)
-    btn.upButton:SetText("^")
 
     -- Move down button
-    btn.downButton = CreateFrame("Button", nil, btn, "UIPanelButtonTemplate")
+    btn.downButton = CreateFrame("Button", nil, btn, "UIPanelScrollDownButtonTemplate")
     btn.downButton:SetSize(20, 20)
     btn.downButton:SetPoint("RIGHT", -180, -10)
-    btn.downButton:SetText("v")
 
     btn:Hide()
     return btn
