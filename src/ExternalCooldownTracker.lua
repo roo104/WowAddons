@@ -243,7 +243,7 @@ local function CreateCooldownTrackerFrame(parentFrame, db)
     db.activeDpsBuffs = activeDpsBuffs
 
     cooldownFrame = CreateFrame("Frame", "NordensParisCooldownFrame", UIParent)
-    cooldownFrame:SetSize(200, 300)
+    cooldownFrame:SetSize(200, 50)  -- Start with minimum height, will adjust dynamically
 
     -- Restore saved position or use default position relative to parent
     if db.cooldownX and db.cooldownY then

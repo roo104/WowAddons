@@ -1,6 +1,6 @@
 ## Interface: 50400
-## Title: Nordens Paris - Renewing Mist Tracker
-## Notes: Tracks Renewing Mist on party and raid members for Mistweaver Monks
+## Title: Nordens Paris - Raid helper
+## Notes: Raid helper
 ## Author: Jonas
 ## Version: 1.1.0
 ## SavedVariablesPerCharacter: NordensParisCharDB
