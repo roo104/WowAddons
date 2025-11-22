@@ -15,7 +15,6 @@ local frame = CreateFrame("Frame", "NordensParisFrame", UIParent)
 local renewingMistFrame = nil
 local statueFrame = nil
 local cooldownFrame = nil
-local sckFrame = nil
 local updateTimer = 0
 local UPDATE_INTERVAL = 0.25 -- Update every 0.25 seconds
 
@@ -25,7 +24,6 @@ NordensParisCharDB = NordensParisCharDB or {
     showRenewingMist = true,
     showStatue = true,
     showCooldowns = true,
-    showSCK = true,
     x = DEFAULT_X,
     y = DEFAULT_Y,
     cooldownX = nil,
@@ -72,14 +70,9 @@ local function InitializeFrame()
         cooldownFrame = NordensParis_ExternalCooldownTracker.CreateCooldownTrackerFrame(frame, NordensParisCharDB)
     end
 
-    -- Create SCK tracker frame using external module
-    if NordensParis_SCKTracker then
-        sckFrame = NordensParis_SCKTracker.CreateSCKFrame(frame, NordensParisCharDB)
-    end
-
-    -- Create statue frame using external module (anchors to SCK frame, appears above it)
+    -- Create statue frame using external module
     if NordensParis_JadeSerpentTracker then
-        statueFrame = NordensParis_JadeSerpentTracker.CreateStatueFrame(frame, NordensParisCharDB, sckFrame)
+        statueFrame = NordensParis_JadeSerpentTracker.CreateStatueFrame(frame, NordensParisCharDB)
     end
 
     -- Initialize PlanManager before ActivePlan
@@ -109,11 +102,6 @@ local function UpdateDisplay()
     -- Update cooldown tracker using external module
     if NordensParis_ExternalCooldownTracker then
         NordensParis_ExternalCooldownTracker.UpdateCooldownDisplay(NordensParisCharDB)
-    end
-
-    -- Update SCK tracker using external module
-    if NordensParis_SCKTracker then
-        NordensParis_SCKTracker.UpdateSCKDisplay(NordensParisCharDB)
     end
 end
 
@@ -211,19 +199,6 @@ SlashCmdList["NORDENSPARIS"] = function(msg)
             else
                 print("|cff00ff80Nordens Paris:|r Cooldown tracker hidden")
             end
-        end
-    elseif cmd == "sck" or cmd == "crane" then
-        NordensParisCharDB.showSCK = not NordensParisCharDB.showSCK
-        if sckFrame then
-            if NordensParisCharDB.showSCK then
-                -- Frame will show automatically during combat
-                print("|cff00ff80Nordens Paris:|r Spinning Crane Kick tracker enabled (visible in combat)")
-            else
-                sckFrame:Hide()
-                print("|cff00ff80Nordens Paris:|r Spinning Crane Kick tracker hidden")
-            end
-        else
-            print("|cff00ff80Nordens Paris:|r SCK tracker not available for this class")
         end
     elseif cmd == "reset" then
         NordensParisCharDB.x = DEFAULT_X

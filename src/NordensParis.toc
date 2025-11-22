@@ -10,7 +10,6 @@ Utils.lua
 RenewingMistTracker.lua
 JadeSerpentTracker.lua
 ExternalCooldownTracker.lua
-SpinningCraneKickTracker.lua
 
 # Communication and plan management
 AddonComm.lua
