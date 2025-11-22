@@ -30,7 +30,7 @@ local function CreateStatueFrame(parentFrame, db, anchorFrame)
     -- Create backdrop texture
     statueFrame.bg = statueFrame:CreateTexture(nil, "BACKGROUND")
     statueFrame.bg:SetAllPoints()
-    statueFrame.bg:SetColorTexture(0, 0.3, 0.3, 0.8)
+    statueFrame.bg:SetColorTexture(0, 0.3, 0, 0.8)
 
     -- Statue icon
     statueIcon = statueFrame:CreateTexture(nil, "ARTWORK")
@@ -42,7 +42,7 @@ local function CreateStatueFrame(parentFrame, db, anchorFrame)
     local titleText = statueFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     titleText:SetPoint("TOPLEFT", 50, -8)
     titleText:SetText("Jade Serpent")
-    titleText:SetTextColor(0, 1, 0.8)
+    titleText:SetTextColor(1, 0.8, 0.2)
 
     -- Duration text
     statueDurationText = statueFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -159,7 +159,7 @@ local function UpdateStatueDisplay(db)
         statueRangeText:SetText("")
 
         -- Active background
-        statueFrame.bg:SetColorTexture(0, 0.3, 0.3, 0.8)
+        statueFrame.bg:SetColorTexture(0, 0.3, 0, 0.8)
         statueIcon:SetAlpha(1.0)
     else
         -- Statue not active
@@ -168,7 +168,7 @@ local function UpdateStatueDisplay(db)
         statueRangeText:SetText("")
 
         -- Dimmed background
-        statueFrame.bg:SetColorTexture(0, 0.15, 0.15, 0.8)
+        statueFrame.bg:SetColorTexture(0, 0, 0, 0.8)
         statueIcon:SetAlpha(0.4)
     end
 end
