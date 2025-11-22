@@ -89,7 +89,7 @@ end
 local function CreateRenewingMistFrame(parentFrame, db)
     frame = parentFrame
 
-    frame:SetSize(200, 80)
+    frame:SetSize(200, 50)
 
     -- Create backdrop texture
     local bg = frame:CreateTexture(nil, "BACKGROUND")
@@ -97,21 +97,21 @@ local function CreateRenewingMistFrame(parentFrame, db)
     bg:SetColorTexture(0, 0, 0, 0.8)
     frame.bg = bg
 
-    -- Title text (headline at top)
-    local titleText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    titleText:SetPoint("TOP", 0, -10)
-    titleText:SetText("Renewing Mist")
-    titleText:SetTextColor(0, 1, 0.5)
-
     -- Icon
     local icon = frame:CreateTexture(nil, "ARTWORK")
     icon:SetSize(32, 32)
-    icon:SetPoint("TOPLEFT", 10, -30)
+    icon:SetPoint("TOPLEFT", 10, -10)
     icon:SetTexture(GetSpellTexture(RENEWING_MIST_SPELL_ID))
+
+    -- Title text (headline at top)
+    local titleText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    titleText:SetPoint("TOPLEFT", 50, -8)
+    titleText:SetText("Renewing Mist")
+    titleText:SetTextColor(1, 0.8, 0.2)
 
     -- Uplift info text (aligned with icon)
     upliftText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    upliftText:SetPoint("LEFT", icon, "RIGHT", 8, 0)
+    upliftText:SetPoint("LEFT", icon, "RIGHT", 8, -5)
     upliftText:SetText("0 targets")
     upliftText:SetTextColor(0.7, 0.7, 0.7)
 

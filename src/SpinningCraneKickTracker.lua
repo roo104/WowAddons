@@ -140,7 +140,7 @@ local function CreateSCKFrame(parentFrame, db)
     sckCountText = sckFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     sckCountText:SetPoint("TOPLEFT", 50, -24)
     sckCountText:SetText("0 targets")
-    sckCountText:SetTextColor(0.5, 0.5, 0.5)
+    sckCountText:SetTextColor(0.7, 0.7, 0.7)
 
     -- Status text (right side)
     sckStatusText = sckFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
