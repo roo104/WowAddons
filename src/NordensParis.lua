@@ -16,7 +16,7 @@ local renewingMistFrame = nil
 local statueFrame = nil
 local cooldownFrame = nil
 local updateTimer = 0
-local UPDATE_INTERVAL = 0.25 -- Update every 0.25 seconds
+local UPDATE_INTERVAL = 1.0 -- Update every 1 second
 
 -- Saved variables (per-character)
 NordensParisCharDB = NordensParisCharDB or {
@@ -120,7 +120,8 @@ local function OnEvent(self, event, ...)
         -- Then initialize frames (which may restore active plan)
         InitializeFrame()
         UpdateDisplay()
-    elseif event == "UNIT_AURA" or event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_ENTERING_WORLD" then
+    elseif event == "PLAYER_ENTERING_WORLD" or event == "GROUP_ROSTER_UPDATE" then
+        -- Only update on major events, UNIT_AURA is handled by individual modules now
         UpdateDisplay()
     end
 end
@@ -136,7 +137,6 @@ end
 
 -- Register events
 frame:RegisterEvent("PLAYER_LOGIN")
-frame:RegisterEvent("UNIT_AURA")
 frame:RegisterEvent("GROUP_ROSTER_UPDATE")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:SetScript("OnEvent", OnEvent)

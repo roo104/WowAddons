@@ -25,7 +25,6 @@ local TRACKED_COOLDOWNS = {
     -- Shaman (Restoration)
     {spellId = 108280, name = "Healing Tide Totem", duration = 10, cooldownDuration = 180, class = "SHAMAN", trackType = "cast"},
     {spellId = 98008, name = "Spirit Link Totem", duration = 6, cooldownDuration = 180, class = "SHAMAN", trackType = "cast"},
-    {spellId = 16190, name = "Mana Tide Totem", duration = 16, cooldownDuration = 180, class = "SHAMAN", trackType = "cast"},
 
     -- Monk (Mistweaver)
     {spellId = 115310, name = "Revival", duration = 180, cooldownDuration = 180, class = "MONK", trackType = "cast"},
@@ -44,11 +43,29 @@ local TRACKED_DPS_BUFFS = {
     {spellId = 80353, name = "Time Warp", duration = 40, cooldownDuration = 600, class = "MAGE", trackType = "buff"}
 }
 
+-- Raid-wide mana gaining spells to track (MoP spell IDs)
+local TRACKED_MANA_BUFFS = {
+    -- Shaman
+    {spellId = 16190, name = "Mana Tide Totem", duration = 16, cooldownDuration = 180, class = "SHAMAN", trackType = "cast"},
+
+    -- Priest (Hymn of Hope)
+    {spellId = 64901, name = "Hymn of Hope", duration = 8, cooldownDuration = 360, class = "PRIEST", trackType = "cast"}
+}
+
 -- Spell ID lookup for cast tracking
 local CAST_TRACKED_SPELLS = {}
 for _, cooldownInfo in ipairs(TRACKED_COOLDOWNS) do
     if cooldownInfo.trackType == "cast" then
-        CAST_TRACKED_SPELLS[cooldownInfo.spellId] = cooldownInfo
+        CAST_TRACKED_SPELLS[cooldownInfo.spellId] = {info = cooldownInfo, category = "healer"}
+    end
+end
+
+-- Add mana buffs to cast tracking
+local CAST_TRACKED_MANA_SPELLS = {}
+for _, buffInfo in ipairs(TRACKED_MANA_BUFFS) do
+    if buffInfo.trackType == "cast" then
+        CAST_TRACKED_MANA_SPELLS[buffInfo.spellId] = buffInfo
+        CAST_TRACKED_SPELLS[buffInfo.spellId] = {info = buffInfo, category = "mana"}
     end
 end
 
@@ -56,9 +73,13 @@ end
 local cooldownFrame = nil
 local cooldownBars = {}
 local dpsBuffBars = {}
+local manaBuffBars = {}
 local activeCooldowns = nil  -- Will be set to db.activeCooldowns
 local activeDpsBuffs = nil  -- Will be set to db.activeDpsBuffs
+local activeManaBuffs = nil  -- Will be set to db.activeManaBuffs
 local combatLogFrame = nil
+local unitAuraFrame = nil
+local needsFullScan = true  -- Flag to trigger full scan on roster changes
 
 -- Handle combat log events for cast-based tracking (like Revival)
 local function OnCombatLogEvent(timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellId, spellName, spellSchool)
@@ -68,10 +89,11 @@ local function OnCombatLogEvent(timestamp, eventType, hideCaster, sourceGUID, so
     end
 
     -- Check if this is a tracked cast spell
-    local cooldownInfo = CAST_TRACKED_SPELLS[spellId]
-    if not cooldownInfo then
+    local spellData = CAST_TRACKED_SPELLS[spellId]
+    if not spellData then
         return
     end
+    local cooldownInfo = spellData.info
 
     -- Only track if the caster is in our group or is the player
     local isPlayer = (sourceGUID == UnitGUID("player"))
@@ -233,6 +255,234 @@ local function CreateDpsBuffBar(index, yOffset)
     return bar
 end
 
+-- Create Mana buff bar
+local function CreateManaBuffBar(index, yOffset)
+    local bar = CreateFrame("Frame", "NordensParisManaBar"..index, cooldownFrame)
+    bar:SetSize(180, 20)
+    bar:SetPoint("TOPLEFT", 10, yOffset - (index - 1) * 25)
+
+    -- Background
+    local bg = bar:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    bg:SetColorTexture(0.1, 0.1, 0.1, 0.8)
+    bar.bg = bg
+
+    -- Progress bar
+    local progress = bar:CreateTexture(nil, "ARTWORK")
+    progress:SetPoint("LEFT", 0, 0)
+    progress:SetHeight(20)
+    progress:SetWidth(180)
+    progress:SetColorTexture(0.2, 0.5, 0.9, 0.7)
+    bar.progress = progress
+
+    -- Icon
+    local icon = bar:CreateTexture(nil, "OVERLAY")
+    icon:SetSize(18, 18)
+    icon:SetPoint("LEFT", 2, 0)
+    bar.icon = icon
+
+    -- Spell name text
+    local nameText = bar:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    nameText:SetPoint("LEFT", 22, 0)
+    nameText:SetJustifyH("LEFT")
+    nameText:SetTextColor(1, 1, 1)
+    bar.nameText = nameText
+
+    -- Timer text
+    local timerText = bar:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    timerText:SetPoint("RIGHT", -5, 0)
+    timerText:SetJustifyH("RIGHT")
+    timerText:SetTextColor(1, 1, 0)
+    bar.timerText = timerText
+
+    bar:Hide()
+    return bar
+end
+
+-- Clean up expired cooldowns and transition buff cooldowns to actual cooldowns
+local function CleanupExpiredCooldowns()
+    local currentTime = GetTime()
+
+    -- Clean up expired cooldowns and transition buff cooldowns to actual cooldowns
+    for key, cd in pairs(activeCooldowns) do
+        if currentTime >= cd.endTime then
+            -- If this was a buff and has a cooldown phase, transition to cooldown tracking
+            if cd.isBuffPhase and cd.cooldownDuration and cd.cooldownDuration > 0 then
+                cd.isBuffPhase = false
+                -- Cooldown started when spell was cast, so endTime = startTime + cooldownDuration
+                cd.endTime = cd.startTime + cd.cooldownDuration
+                cd.duration = cd.cooldownDuration
+            else
+                -- Cooldown fully expired, remove it
+                activeCooldowns[key] = nil
+            end
+        end
+    end
+
+    -- Clean up expired DPS buffs and transition to cooldown tracking
+    for key, buff in pairs(activeDpsBuffs) do
+        if currentTime >= buff.endTime then
+            -- If this was a buff and has a cooldown phase, transition to cooldown tracking
+            if buff.isBuffPhase and buff.cooldownDuration and buff.cooldownDuration > 0 then
+                buff.isBuffPhase = false
+                -- Cooldown started when spell was cast, so endTime = startTime + cooldownDuration
+                buff.endTime = buff.startTime + buff.cooldownDuration
+                buff.duration = buff.cooldownDuration
+            else
+                -- Cooldown fully expired, remove it
+                activeDpsBuffs[key] = nil
+            end
+        end
+    end
+
+    -- Clean up expired Mana buffs and transition to cooldown tracking
+    for key, buff in pairs(activeManaBuffs) do
+        if currentTime >= buff.endTime then
+            -- If this was a buff and has a cooldown phase, transition to cooldown tracking
+            if buff.isBuffPhase and buff.cooldownDuration and buff.cooldownDuration > 0 then
+                buff.isBuffPhase = false
+                -- Cooldown started when spell was cast, so endTime = startTime + cooldownDuration
+                buff.endTime = buff.startTime + buff.cooldownDuration
+                buff.duration = buff.cooldownDuration
+            else
+                -- Cooldown fully expired, remove it
+                activeManaBuffs[key] = nil
+            end
+        end
+    end
+end
+
+-- Helper function to scan a single unit for specific buff
+local function ScanUnitForSpecificBuff(unit, spellId, cooldownInfo, currentTime)
+    if not UnitExists(unit) then return end
+
+    for buffIndex = 1, 40 do
+        local name, _, _, _, _, expirationTime, caster, _, _, buffSpellId = UnitBuff(unit, buffIndex)
+        if not name then break end
+
+        if buffSpellId == spellId then
+            local casterName = caster and UnitName(caster) or "Unknown"
+            local _, casterClass = UnitClass(caster)
+            local key = casterName .. "-" .. spellId
+
+            if not activeCooldowns[key] then
+                activeCooldowns[key] = {
+                    spellId = spellId,
+                    spellName = cooldownInfo.name,
+                    casterName = casterName,
+                    class = casterClass or cooldownInfo.class,
+                    startTime = currentTime,
+                    endTime = expirationTime,
+                    duration = cooldownInfo.duration > 0 and cooldownInfo.duration or (expirationTime - currentTime),
+                    cooldownDuration = cooldownInfo.cooldownDuration,
+                    buffEndTime = expirationTime,
+                    isBuffPhase = true
+                }
+            end
+            return true
+        end
+    end
+    return false
+end
+
+-- Helper function to scan a single unit for specific DPS buff
+local function ScanUnitForSpecificDpsBuff(unit, spellId, buffInfo, currentTime)
+    if not UnitExists(unit) then return end
+
+    for buffIndex = 1, 40 do
+        local name, _, _, _, _, expirationTime, caster, _, _, buffSpellId = UnitBuff(unit, buffIndex)
+        if not name then break end
+
+        if buffSpellId == spellId then
+            local casterName = caster and UnitName(caster) or "Unknown"
+            local _, casterClass = UnitClass(caster)
+            local key = casterName .. "-" .. spellId
+
+            if not activeDpsBuffs[key] then
+                activeDpsBuffs[key] = {
+                    spellId = spellId,
+                    spellName = buffInfo.name,
+                    casterName = casterName,
+                    class = casterClass or buffInfo.class,
+                    startTime = currentTime,
+                    endTime = expirationTime,
+                    duration = buffInfo.duration > 0 and buffInfo.duration or (expirationTime - currentTime),
+                    cooldownDuration = buffInfo.cooldownDuration,
+                    buffEndTime = expirationTime,
+                    isBuffPhase = true
+                }
+            end
+            return true
+        end
+    end
+    return false
+end
+
+-- Helper function to scan a single unit for specific Mana buff
+local function ScanUnitForSpecificManaBuff(unit, spellId, buffInfo, currentTime)
+    if not UnitExists(unit) then return end
+
+    for buffIndex = 1, 40 do
+        local name, _, _, _, _, expirationTime, caster, _, _, buffSpellId = UnitBuff(unit, buffIndex)
+        if not name then break end
+
+        if buffSpellId == spellId then
+            local casterName = caster and UnitName(caster) or "Unknown"
+            local _, casterClass = UnitClass(caster)
+            local key = casterName .. "-" .. spellId
+
+            if not activeManaBuffs[key] then
+                activeManaBuffs[key] = {
+                    spellId = spellId,
+                    spellName = buffInfo.name,
+                    casterName = casterName,
+                    class = casterClass or buffInfo.class,
+                    startTime = currentTime,
+                    endTime = expirationTime,
+                    duration = buffInfo.duration > 0 and buffInfo.duration or (expirationTime - currentTime),
+                    cooldownDuration = buffInfo.cooldownDuration,
+                    buffEndTime = expirationTime,
+                    isBuffPhase = true
+                }
+            end
+            return true
+        end
+    end
+    return false
+end
+
+-- Event-driven: Handle UNIT_AURA for specific unit
+local function OnUnitAura(unit)
+    if not unit then return end
+
+    local currentTime = GetTime()
+
+    -- Check this unit for all tracked buff-based healer cooldowns
+    for _, cooldownInfo in ipairs(TRACKED_COOLDOWNS) do
+        if cooldownInfo.trackType == "buff" then
+            ScanUnitForSpecificBuff(unit, cooldownInfo.spellId, cooldownInfo, currentTime)
+        end
+    end
+
+    -- Check this unit for all tracked DPS buffs
+    if IsInRaid() or IsInGroup() then
+        for _, buffInfo in ipairs(TRACKED_DPS_BUFFS) do
+            if buffInfo.trackType == "buff" then
+                ScanUnitForSpecificDpsBuff(unit, buffInfo.spellId, buffInfo, currentTime)
+            end
+        end
+    end
+
+    -- Check this unit for all tracked Mana buffs
+    if IsInRaid() or IsInGroup() then
+        for _, buffInfo in ipairs(TRACKED_MANA_BUFFS) do
+            if buffInfo.trackType == "buff" then
+                ScanUnitForSpecificManaBuff(unit, buffInfo.spellId, buffInfo, currentTime)
+            end
+        end
+    end
+end
+
 -- Create the main cooldown tracker frame
 local function CreateCooldownTrackerFrame(parentFrame, db)
     -- Initialize activeCooldowns from saved data
@@ -241,6 +491,9 @@ local function CreateCooldownTrackerFrame(parentFrame, db)
 
     activeDpsBuffs = db.activeDpsBuffs or {}
     db.activeDpsBuffs = activeDpsBuffs
+
+    activeManaBuffs = db.activeManaBuffs or {}
+    db.activeManaBuffs = activeManaBuffs
 
     cooldownFrame = CreateFrame("Frame", "NordensParisCooldownFrame", UIParent)
     cooldownFrame:SetSize(200, 50)  -- Start with minimum height, will adjust dynamically
@@ -299,6 +552,31 @@ local function CreateCooldownTrackerFrame(parentFrame, db)
         dpsBuffBars[i] = CreateDpsBuffBar(i, 0)  -- yOffset will be updated dynamically
     end
 
+    -- Title for Mana Cooldowns (will be positioned dynamically)
+    local manaTitle = cooldownFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    manaTitle:SetText("Mana Cooldowns")
+    manaTitle:SetTextColor(0.4, 0.7, 1)
+    cooldownFrame.manaTitle = manaTitle
+
+    -- Create Mana buff bars (position will be set dynamically)
+    for i = 1, 5 do
+        manaBuffBars[i] = CreateManaBuffBar(i, 0)  -- yOffset will be updated dynamically
+    end
+
+    -- Create UNIT_AURA listener frame for event-driven buff tracking
+    if not unitAuraFrame then
+        unitAuraFrame = CreateFrame("Frame")
+        unitAuraFrame:RegisterEvent("UNIT_AURA")
+        unitAuraFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+        unitAuraFrame:SetScript("OnEvent", function(self, event, unit)
+            if event == "UNIT_AURA" then
+                OnUnitAura(unit)
+            elseif event == "GROUP_ROSTER_UPDATE" then
+                needsFullScan = true
+            end
+        end)
+    end
+
     -- Create independent spell cast listener frame
     -- Use UNIT_SPELLCAST_SUCCEEDED instead of COMBAT_LOG since it's more reliable
     if not combatLogFrame then
@@ -317,8 +595,8 @@ local function CreateCooldownTrackerFrame(parentFrame, db)
                 end
 
                 -- Check if this is a tracked cast spell
-                local cooldownInfo = CAST_TRACKED_SPELLS[spellId]
-                if not cooldownInfo then
+                local spellData = CAST_TRACKED_SPELLS[spellId]
+                if not spellData then
                     return
                 end
 
@@ -330,10 +608,11 @@ local function CreateCooldownTrackerFrame(parentFrame, db)
                     local casterName = UnitName(unit)
                     local _, class = UnitClass(unit)
                     local currentTime = GetTime()
+                    local cooldownInfo = spellData.info
                     local duration = cooldownInfo.duration
                     local key = casterName .. "-" .. spellId
 
-                    activeCooldowns[key] = {
+                    local spellRecord = {
                         spellId = spellId,
                         spellName = cooldownInfo.name,
                         casterName = casterName,
@@ -345,6 +624,13 @@ local function CreateCooldownTrackerFrame(parentFrame, db)
                         buffEndTime = currentTime + duration,
                         isBuffPhase = true  -- Show active/channel phase first
                     }
+
+                    -- Route to appropriate table based on category
+                    if spellData.category == "mana" then
+                        activeManaBuffs[key] = spellRecord
+                    else
+                        activeCooldowns[key] = spellRecord
+                    end
                 end
             end
         end)
@@ -376,174 +662,14 @@ local function GetClassColor(class)
     return colors[class] or {0.5, 0.5, 0.5}
 end
 
--- Helper function to scan a single unit for cooldowns (buff-based tracking)
-local function ScanUnitForCooldowns(unit, targetUnits, currentTime)
-    if not UnitExists(unit) then return end
-
-    local _, class = UnitClass(unit)
-    local unitName = UnitName(unit)
-
-    -- Check for tracked cooldowns that use buff tracking
-    for _, cooldownInfo in ipairs(TRACKED_COOLDOWNS) do
-        if class == cooldownInfo.class and cooldownInfo.trackType == "buff" then
-            -- Check if buff is active on any target
-            for _, targetUnit in ipairs(targetUnits) do
-                if UnitExists(targetUnit) then
-                    for buffIndex = 1, 40 do
-                        local name, _, _, _, _, expirationTime, caster, _, _, spellId = UnitBuff(targetUnit, buffIndex)
-                        if not name then break end
-
-                        if spellId == cooldownInfo.spellId then
-                            local casterName = caster and UnitName(caster) or "Unknown"
-                            local key = casterName .. "-" .. spellId
-
-                            if not activeCooldowns[key] then
-                                activeCooldowns[key] = {
-                                    spellId = spellId,
-                                    spellName = cooldownInfo.name,
-                                    casterName = casterName,
-                                    class = class,
-                                    startTime = currentTime,
-                                    endTime = expirationTime,
-                                    duration = cooldownInfo.duration > 0 and cooldownInfo.duration or (expirationTime - currentTime),
-                                    cooldownDuration = cooldownInfo.cooldownDuration,
-                                    buffEndTime = expirationTime,
-                                    isBuffPhase = true
-                                }
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
-
--- Helper function to scan for DPS buffs
-local function ScanUnitForDpsBuffs(unit, targetUnits, currentTime)
-    if not UnitExists(unit) then return end
-
-    local _, class = UnitClass(unit)
-    local unitName = UnitName(unit)
-
-    -- Check for tracked DPS buffs
-    for _, buffInfo in ipairs(TRACKED_DPS_BUFFS) do
-        if class == buffInfo.class and buffInfo.trackType == "buff" then
-            -- Check if buff is active on any target (usually raid-wide buffs)
-            for _, targetUnit in ipairs(targetUnits) do
-                if UnitExists(targetUnit) then
-                    for buffIndex = 1, 40 do
-                        local name, _, _, _, _, expirationTime, caster, _, _, spellId = UnitBuff(targetUnit, buffIndex)
-                        if not name then break end
-
-                        if spellId == buffInfo.spellId then
-                            local casterName = caster and UnitName(caster) or "Unknown"
-                            local key = casterName .. "-" .. spellId
-
-                            if not activeDpsBuffs[key] then
-                                activeDpsBuffs[key] = {
-                                    spellId = spellId,
-                                    spellName = buffInfo.name,
-                                    casterName = casterName,
-                                    class = class,
-                                    startTime = currentTime,
-                                    endTime = expirationTime,
-                                    duration = buffInfo.duration > 0 and buffInfo.duration or (expirationTime - currentTime),
-                                    cooldownDuration = buffInfo.cooldownDuration,
-                                    buffEndTime = expirationTime,
-                                    isBuffPhase = true
-                                }
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
-
--- Check if a unit has a tracked cooldown active
-local function ScanForCooldowns()
-    local currentTime = GetTime()
-    local unitsToScan = {}
-    local targetUnits = {}
-
-    -- Determine units to scan based on group type
-    if IsInRaid() then
-        -- In raid: scan all raid members (includes player)
-        local unitCount = GetNumGroupMembers()
-        for i = 1, unitCount do
-            table.insert(unitsToScan, "raid" .. i)
-            table.insert(targetUnits, "raid" .. i)
-        end
-    elseif IsInGroup() then
-        -- In party: scan player + party members
-        table.insert(unitsToScan, "player")
-        table.insert(targetUnits, "player")
-
-        local unitCount = GetNumSubgroupMembers()
-        for i = 1, unitCount do
-            table.insert(unitsToScan, "party" .. i)
-            table.insert(targetUnits, "party" .. i)
-        end
-    else
-        -- Solo: only scan player
-        table.insert(unitsToScan, "player")
-        table.insert(targetUnits, "player")
-    end
-
-    -- Scan all units for healer cooldowns
-    for _, unit in ipairs(unitsToScan) do
-        ScanUnitForCooldowns(unit, targetUnits, currentTime)
-    end
-
-    -- Scan all units for DPS buffs (only in party or raid, not solo)
-    if IsInRaid() or IsInGroup() then
-        for _, unit in ipairs(unitsToScan) do
-            ScanUnitForDpsBuffs(unit, targetUnits, currentTime)
-        end
-    end
-
-    -- Clean up expired cooldowns and transition buff cooldowns to actual cooldowns
-    for key, cd in pairs(activeCooldowns) do
-        if currentTime >= cd.endTime then
-            -- If this was a buff and has a cooldown phase, transition to cooldown tracking
-            if cd.isBuffPhase and cd.cooldownDuration and cd.cooldownDuration > 0 then
-                cd.isBuffPhase = false
-                -- Cooldown started when spell was cast, so endTime = startTime + cooldownDuration
-                cd.endTime = cd.startTime + cd.cooldownDuration
-                cd.duration = cd.cooldownDuration
-            else
-                -- Cooldown fully expired, remove it
-                activeCooldowns[key] = nil
-            end
-        end
-    end
-
-    -- Clean up expired DPS buffs and transition to cooldown tracking
-    for key, buff in pairs(activeDpsBuffs) do
-        if currentTime >= buff.endTime then
-            -- If this was a buff and has a cooldown phase, transition to cooldown tracking
-            if buff.isBuffPhase and buff.cooldownDuration and buff.cooldownDuration > 0 then
-                buff.isBuffPhase = false
-                -- Cooldown started when spell was cast, so endTime = startTime + cooldownDuration
-                buff.endTime = buff.startTime + buff.cooldownDuration
-                buff.duration = buff.cooldownDuration
-            else
-                -- Cooldown fully expired, remove it
-                activeDpsBuffs[key] = nil
-            end
-        end
-    end
-end
-
 -- Update cooldown display
 local function UpdateCooldownDisplay(db)
     if not cooldownFrame or not db.showCooldowns then
         return
     end
 
-    ScanForCooldowns()
+    -- Only clean up expired cooldowns, don't scan all units
+    CleanupExpiredCooldowns()
 
     -- Sort active healer cooldowns by time remaining
     local sortedCooldowns = {}
@@ -565,8 +691,18 @@ local function UpdateCooldownDisplay(db)
         return (a.endTime - GetTime()) > (b.endTime - GetTime())
     end)
 
+    -- Sort active Mana buffs by time remaining
+    local sortedManaBuffs = {}
+    for _, buff in pairs(activeManaBuffs) do
+        table.insert(sortedManaBuffs, buff)
+    end
+
+    table.sort(sortedManaBuffs, function(a, b)
+        return (a.endTime - GetTime()) > (b.endTime - GetTime())
+    end)
+
     -- Hide entire frame if no cooldowns are active
-    if #sortedCooldowns == 0 and #sortedBuffs == 0 then
+    if #sortedCooldowns == 0 and #sortedBuffs == 0 and #sortedManaBuffs == 0 then
         cooldownFrame:Hide()
         return
     end
@@ -727,22 +863,116 @@ local function UpdateCooldownDisplay(db)
         end
     end
 
-    -- Adjust frame height based on active cooldowns and buffs
-    local totalHeight
+    -- Calculate Mana buff section offset
+    local manaSectionOffset
     if visibleHealerCds > 0 then
-        totalHeight = 30 + (visibleHealerCds * 25)  -- Title + healer bars
         if visibleDpsBuffs > 0 then
-            totalHeight = totalHeight + 30 + (visibleDpsBuffs * 25) + 10  -- Spacing + DPS title + DPS bars + bottom padding
+            manaSectionOffset = -30 - (visibleHealerCds * 25) - 30 - (visibleDpsBuffs * 25) - 30  -- Title - healer bars - DPS section - spacing
+        else
+            manaSectionOffset = -30 - (visibleHealerCds * 25) - 30  -- Title - healer bars - spacing
         end
     else
-        -- Only DPS buffs, no healer section
         if visibleDpsBuffs > 0 then
-            totalHeight = 30 + (visibleDpsBuffs * 25) + 10  -- DPS title + DPS bars + bottom padding
+            manaSectionOffset = -30 - (visibleDpsBuffs * 25) - 30  -- DPS section - spacing
         else
-            totalHeight = 50  -- Minimum height
+            manaSectionOffset = -30  -- No other sections, start right below top
         end
     end
-    cooldownFrame:SetHeight(math.max(50, totalHeight + 10))
+
+    -- Show/hide Mana title based on whether we have Mana buffs
+    if #sortedManaBuffs > 0 then
+        cooldownFrame.manaTitle:Show()
+        cooldownFrame.manaTitle:SetPoint("TOPLEFT", 10, manaSectionOffset + 5)
+    else
+        cooldownFrame.manaTitle:Hide()
+    end
+
+    -- Update Mana buff bars
+    local visibleManaBuffs = 0
+    for i = 1, 5 do
+        local bar = manaBuffBars[i]
+        local buff = sortedManaBuffs[i]
+
+        -- Update bar position
+        bar:ClearAllPoints()
+        bar:SetPoint("TOPLEFT", 10, manaSectionOffset - 20 - (i - 1) * 25)
+
+        if buff then
+            bar:Show()
+            visibleManaBuffs = visibleManaBuffs + 1
+
+            -- Update icon
+            local texture = GetSpellTexture(buff.spellId)
+            bar.icon:SetTexture(texture)
+
+            -- Update name text with caster
+            local classColor = GetClassColor(buff.class)
+            local displayText = buff.casterName .. ": " .. buff.spellName
+            if buff.isBuffPhase then
+                displayText = displayText .. " (ACTIVE)"
+            end
+            bar.nameText:SetText(displayText)
+            bar.nameText:SetTextColor(classColor[1], classColor[2], classColor[3])
+
+            -- Update timer
+            local timeRemaining = buff.endTime - currentTime
+            if timeRemaining > 0 then
+                -- Format timer without decimals
+                local minutes = math.floor(timeRemaining / 60)
+                local seconds = math.floor(timeRemaining % 60)
+
+                if minutes > 0 then
+                    bar.timerText:SetText(string.format("%dm %ds", minutes, seconds))
+                else
+                    bar.timerText:SetText(string.format("%ds", seconds))
+                end
+
+                -- Update progress bar
+                local progress = timeRemaining / buff.duration
+                bar.progress:SetWidth(180 * progress)
+
+                -- Color based on phase
+                if buff.isBuffPhase then
+                    -- Buff is active - use blue colors
+                    if timeRemaining > buff.duration * 0.5 then
+                        bar.progress:SetColorTexture(0.2, 0.5, 0.9, 0.7)
+                    elseif timeRemaining > buff.duration * 0.25 then
+                        bar.progress:SetColorTexture(0.3, 0.6, 1, 0.7)
+                    else
+                        bar.progress:SetColorTexture(0.5, 0.7, 1, 0.7)
+                    end
+                else
+                    -- On cooldown - use darker blue
+                    bar.progress:SetColorTexture(0.2, 0.3, 0.6, 0.7)
+                end
+            else
+                bar.timerText:SetText("0s")
+                bar.progress:SetWidth(0)
+            end
+        else
+            bar:Hide()
+        end
+    end
+
+    -- Adjust frame height based on active cooldowns and buffs
+    local totalHeight = 30  -- Start with title space
+
+    if visibleHealerCds > 0 then
+        totalHeight = totalHeight + (visibleHealerCds * 25)  -- Healer bars
+    end
+
+    if visibleDpsBuffs > 0 then
+        totalHeight = totalHeight + 30 + (visibleDpsBuffs * 25)  -- DPS title + bars
+    end
+
+    if visibleManaBuffs > 0 then
+        totalHeight = totalHeight + 30 + (visibleManaBuffs * 25)  -- Mana title + bars
+    end
+
+    -- Add bottom padding
+    totalHeight = totalHeight + 10
+
+    cooldownFrame:SetHeight(math.max(50, totalHeight))
 end
 
 -- Toggle frame visibility
