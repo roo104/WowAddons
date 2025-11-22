@@ -13,10 +13,6 @@ local UPLIFT_SPELL_ID = 116670 -- Uplift spell ID for MoP
 -- Frame variables
 local frame = nil
 local upliftText = nil
-local unitAuraFrame = nil
-local cachedTargets = {}
-local cachedTotalMembers = 0
-local needsUpdate = true
 
 -- Check if a unit has Renewing Mist buff
 local function HasRenewingMist(unit)
@@ -89,35 +85,11 @@ local function GetRenewingMistTargets()
     return targets, totalMembers
 end
 
--- Event handler for UNIT_AURA to trigger cache refresh
-local function OnUnitAura(unit)
-    if not unit then return end
-    -- Check if this unit has Renewing Mist, if so mark for update
-    local hasIt = HasRenewingMist(unit)
-    if hasIt or cachedTargets[unit] then
-        needsUpdate = true
-    end
-end
-
 -- Initialize the main frame
 local function CreateRenewingMistFrame(parentFrame, db)
     frame = parentFrame
 
     frame:SetSize(200, 50)
-
-    -- Create UNIT_AURA event listener for event-driven updates
-    if not unitAuraFrame then
-        unitAuraFrame = CreateFrame("Frame")
-        unitAuraFrame:RegisterEvent("UNIT_AURA")
-        unitAuraFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
-        unitAuraFrame:SetScript("OnEvent", function(self, event, unit)
-            if event == "UNIT_AURA" then
-                OnUnitAura(unit)
-            elseif event == "GROUP_ROSTER_UPDATE" then
-                needsUpdate = true
-            end
-        end)
-    end
 
     -- Create backdrop texture
     local bg = frame:CreateTexture(nil, "BACKGROUND")
@@ -178,14 +150,9 @@ local function UpdateDisplay(db)
         return
     end
 
-    -- Only refresh cache if needed (event-driven)
-    if needsUpdate then
-        cachedTargets, cachedTotalMembers = GetRenewingMistTargets()
-        needsUpdate = false
-    end
-
-    local targets = cachedTargets
-    local totalMembers = cachedTotalMembers
+    -- Always refresh targets to get current time remaining values
+    -- The HasRenewingMist function recalculates time remaining on each call
+    local targets, totalMembers = GetRenewingMistTargets()
     local count = #targets
 
     -- Update Uplift info
