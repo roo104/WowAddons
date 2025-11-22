@@ -76,21 +76,25 @@ local function InitializeFrame()
         cooldownFrame = NordensParis_ExternalCooldownTracker.CreateCooldownTrackerFrame(frame, NordensParisCharDB)
     end
 
-    -- Create statue frame using external module
-    if NordensParis_JadeSerpentTracker then
-        statueFrame = NordensParis_JadeSerpentTracker.CreateStatueFrame(frame, NordensParisCharDB)
-    end
-
-    -- Create SCK tracker frame using external module (anchors to statue frame, appears on top)
+    -- Create SCK tracker frame using external module
     if NordensParis_SCKTracker then
-        sckFrame = NordensParis_SCKTracker.CreateSCKFrame(frame, NordensParisCharDB, statueFrame)
+        sckFrame = NordensParis_SCKTracker.CreateSCKFrame(frame, NordensParisCharDB)
     end
 
-    -- Create memory display text
+    -- Create statue frame using external module (anchors to SCK frame, appears above it)
+    if NordensParis_JadeSerpentTracker then
+        statueFrame = NordensParis_JadeSerpentTracker.CreateStatueFrame(frame, NordensParisCharDB, sckFrame)
+    end
+
+    -- Create memory display text (anchor to statue frame if available)
     memoryText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    memoryText:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", 5, 5)
+    if statueFrame then
+        memoryText:SetPoint("BOTTOMRIGHT", statueFrame, "TOPRIGHT", -5, 5)
+    else
+        memoryText:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", 5, 5)
+    end
     memoryText:SetTextColor(0.7, 0.7, 0.7)
-    memoryText:SetJustifyH("LEFT")
+    memoryText:SetJustifyH("RIGHT")
     if NordensParisCharDB.showMemory then
         memoryText:Show()
     else

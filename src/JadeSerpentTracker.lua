@@ -16,10 +16,16 @@ local statueDurationText = nil
 local statueRangeText = nil
 
 -- Create a frame to show Jade Serpent Statue status
-local function CreateStatueFrame(parentFrame, db)
+local function CreateStatueFrame(parentFrame, db, anchorFrame)
     statueFrame = CreateFrame("Frame", "NordensParisStatueFrame", parentFrame)
     statueFrame:SetSize(200, 50)
-    statueFrame:SetPoint("BOTTOM", parentFrame, "TOP", 0, 5)
+
+    -- Anchor above SCK frame if available, otherwise to parent frame
+    if anchorFrame then
+        statueFrame:SetPoint("BOTTOM", anchorFrame, "TOP", 0, 5)
+    else
+        statueFrame:SetPoint("BOTTOM", parentFrame, "TOP", 0, 5)
+    end
 
     -- Create backdrop texture
     statueFrame.bg = statueFrame:CreateTexture(nil, "BACKGROUND")

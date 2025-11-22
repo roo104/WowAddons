@@ -114,16 +114,10 @@ local function GetSCKTargetCount()
 end
 
 -- Create SCK tracker frame
-local function CreateSCKFrame(parentFrame, db, anchorFrame)
+local function CreateSCKFrame(parentFrame, db)
     sckFrame = CreateFrame("Frame", "NordensParisSCKFrame", parentFrame)
     sckFrame:SetSize(200, 50)
-
-    -- Anchor to statue frame if available, otherwise to parent frame
-    if anchorFrame then
-        sckFrame:SetPoint("BOTTOM", anchorFrame, "TOP", 0, 5)
-    else
-        sckFrame:SetPoint("BOTTOM", parentFrame, "TOP", 0, 5)
-    end
+    sckFrame:SetPoint("BOTTOM", parentFrame, "TOP", 0, 5)
 
     -- Create backdrop texture
     sckFrame.bg = sckFrame:CreateTexture(nil, "BACKGROUND")
