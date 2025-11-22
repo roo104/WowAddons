@@ -16,11 +16,8 @@ local renewingMistFrame = nil
 local statueFrame = nil
 local cooldownFrame = nil
 local sckFrame = nil
-local memoryText = nil
 local updateTimer = 0
 local UPDATE_INTERVAL = 0.25 -- Update every 0.25 seconds
-local memoryUpdateTimer = 0
-local MEMORY_UPDATE_INTERVAL = 2 -- Update memory display every 2 seconds
 
 -- Saved variables (per-character)
 NordensParisCharDB = NordensParisCharDB or {
@@ -29,7 +26,6 @@ NordensParisCharDB = NordensParisCharDB or {
     showStatue = true,
     showCooldowns = true,
     showSCK = true,
-    showMemory = false,
     x = DEFAULT_X,
     y = DEFAULT_Y,
     cooldownX = nil,
@@ -84,21 +80,6 @@ local function InitializeFrame()
     -- Create statue frame using external module (anchors to SCK frame, appears above it)
     if NordensParis_JadeSerpentTracker then
         statueFrame = NordensParis_JadeSerpentTracker.CreateStatueFrame(frame, NordensParisCharDB, sckFrame)
-    end
-
-    -- Create memory display text (anchor to statue frame if available)
-    memoryText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    if statueFrame then
-        memoryText:SetPoint("BOTTOMRIGHT", statueFrame, "TOPRIGHT", -5, 5)
-    else
-        memoryText:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", 5, 5)
-    end
-    memoryText:SetTextColor(0.7, 0.7, 0.7)
-    memoryText:SetJustifyH("RIGHT")
-    if NordensParisCharDB.showMemory then
-        memoryText:Show()
-    else
-        memoryText:Hide()
     end
 
     -- Initialize PlanManager before ActivePlan
@@ -162,17 +143,6 @@ local function OnUpdate(self, elapsed)
     if updateTimer >= UPDATE_INTERVAL then
         updateTimer = 0
         UpdateDisplay()
-    end
-
-    -- Update memory display less frequently
-    memoryUpdateTimer = memoryUpdateTimer + elapsed
-    if memoryUpdateTimer >= MEMORY_UPDATE_INTERVAL then
-        memoryUpdateTimer = 0
-        if NordensParisCharDB.showMemory and memoryText and NordensParis_Utils then
-            local memory = NordensParis_Utils.GetMemoryUsage()
-            local formattedMemory = NordensParis_Utils.FormatMemory(memory)
-            memoryText:SetText("Memory: " .. formattedMemory)
-        end
     end
 end
 
@@ -254,23 +224,6 @@ SlashCmdList["NORDENSPARIS"] = function(msg)
             end
         else
             print("|cff00ff80Nordens Paris:|r SCK tracker not available for this class")
-        end
-    elseif cmd == "memory" or cmd == "mem" then
-        NordensParisCharDB.showMemory = not NordensParisCharDB.showMemory
-        if memoryText then
-            if NordensParisCharDB.showMemory then
-                memoryText:Show()
-                -- Update immediately
-                if NordensParis_Utils then
-                    local memory = NordensParis_Utils.GetMemoryUsage()
-                    local formattedMemory = NordensParis_Utils.FormatMemory(memory)
-                    memoryText:SetText("Memory: " .. formattedMemory)
-                end
-                print("|cff00ff80Nordens Paris:|r Memory display shown")
-            else
-                memoryText:Hide()
-                print("|cff00ff80Nordens Paris:|r Memory display hidden")
-            end
         end
     elseif cmd == "reset" then
         NordensParisCharDB.x = DEFAULT_X
@@ -381,7 +334,6 @@ SlashCmdList["NORDENSPARIS"] = function(msg)
         print("  /np statue - Toggle statue tracker")
         print("  /np cooldowns (or cds) - Toggle cooldown tracker")
         print("  /np sck (or crane) - Toggle Spinning Crane Kick tracker")
-        print("  /np memory (or mem) - Toggle memory usage display")
         print("  /np reset - Reset position")
         print("  ")
         print("|cff00ff80Plan Management:|r")

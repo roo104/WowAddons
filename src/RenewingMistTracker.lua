@@ -107,7 +107,7 @@ local function CreateRenewingMistFrame(parentFrame, db)
     local titleText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     titleText:SetPoint("TOPLEFT", 50, -8)
     titleText:SetText("Renewing Mist")
-    titleText:SetTextColor(1, 0.8, 0.2)
+    titleText:SetTextColor(0.5, 0.8, 1)
 
     -- Uplift info text (aligned with icon)
     upliftText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -122,13 +122,13 @@ local function CreateRenewingMistFrame(parentFrame, db)
         -- Create bar background
         local barBg = frame:CreateTexture(nil, "BACKGROUND")
         barBg:SetSize(180, 16)
-        barBg:SetPoint("TOPLEFT", 10, -70 - (i - 1) * 18)
+        barBg:SetPoint("TOPLEFT", 10, -50 - (i - 1) * 18)
         barBg:SetColorTexture(0.1, 0.1, 0.1, 0.8)
 
         -- Create progress bar
         local bar = frame:CreateTexture(nil, "ARTWORK")
         bar:SetSize(180, 16)
-        bar:SetPoint("TOPLEFT", 10, -70 - (i - 1) * 18)
+        bar:SetPoint("TOPLEFT", 10, -50 - (i - 1) * 18)
         bar:SetColorTexture(0, 1, 0, 0.5)
         frame.listBars[i] = {bg = barBg, progress = bar}
 
@@ -211,7 +211,7 @@ local function UpdateDisplay(db)
         end
 
         -- Adjust main frame height based on number of targets
-        local baseHeight = 80
+        local baseHeight = 60
         local listHeight = math.min(count, 10) * 18
         frame:SetHeight(baseHeight + listHeight)
     else
@@ -229,7 +229,7 @@ local function UpdateDisplay(db)
         end
         -- Reset to base height
         if frame then
-            frame:SetHeight(80)
+            frame:SetHeight(60)
         end
     end
 end

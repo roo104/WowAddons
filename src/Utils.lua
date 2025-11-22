@@ -37,21 +37,5 @@ function Utils.GetGroupMembers()
     return members
 end
 
--- Get addon memory usage in KB
-function Utils.GetMemoryUsage()
-    UpdateAddOnMemoryUsage()
-    local memory = GetAddOnMemoryUsage("NordensParis")
-    return memory
-end
-
--- Format memory size for display
-function Utils.FormatMemory(kb)
-    if kb < 1024 then
-        return string.format("%.1f KB", kb)
-    else
-        return string.format("%.2f MB", kb / 1024)
-    end
-end
-
 -- Export the module
 NordensParis_Utils = Utils

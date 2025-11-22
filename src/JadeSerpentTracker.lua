@@ -42,7 +42,7 @@ local function CreateStatueFrame(parentFrame, db, anchorFrame)
     local titleText = statueFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     titleText:SetPoint("TOPLEFT", 50, -8)
     titleText:SetText("Jade Serpent")
-    titleText:SetTextColor(1, 0.8, 0.2)
+    titleText:SetTextColor(0.5, 0.8, 1)
 
     -- Duration text
     statueDurationText = statueFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")

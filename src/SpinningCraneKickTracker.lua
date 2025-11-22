@@ -134,7 +134,7 @@ local function CreateSCKFrame(parentFrame, db)
     local titleText = sckFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     titleText:SetPoint("TOPLEFT", 50, -8)
     titleText:SetText("Spinning Crane")
-    titleText:SetTextColor(1, 0.8, 0.2)
+    titleText:SetTextColor(0.5, 0.8, 1)
 
     -- Count text (large, prominent)
     sckCountText = sckFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
