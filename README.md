@@ -6,10 +6,12 @@ A comprehensive Renewing Mist tracker for Mistweaver Monks in WoW Classic MoP.
 
 - **Renewing Mist Tracking**: Real-time tracking of Renewing Mist on all party/raid members
 - **Uplift Counter**: Shows how many targets would be healed by Uplift with optimal timing alerts (3+ targets)
+- **Spinning Crane Kick Optimizer**: Visual indicator when 3+ injured targets are within 8 yards (optimal SCK usage)
 - **Jade Serpent Statue Monitor**: Duration tracking and status display for your Jade Serpent Statue
 - **External Cooldown Tracker**: Track major healing cooldowns from other healers
 - **Player List**: Detailed list showing all players with Renewing Mist and time remaining
 - **Color-Coded Display**: Visual indicators for buff coverage and urgency
+- **Performance Optimized**: Smart caching and throttling for smooth performance in 40-man raids
 
 ## Commands
 
@@ -18,6 +20,8 @@ A comprehensive Renewing Mist tracker for Mistweaver Monks in WoW Classic MoP.
 - `/np mist` (or `renewing`) - Toggle Renewing Mist tracker
 - `/np statue` - Toggle Jade Serpent Statue tracker
 - `/np cooldowns` (or `cds`) - Toggle cooldown tracker
+- `/np sck` (or `crane`) - Toggle Spinning Crane Kick tracker
+- `/np memory` (or `mem`) - Toggle memory usage display
 - `/np reset` - Reset frame position to default
 - `/np help` - Show command list
 
@@ -52,7 +56,7 @@ A comprehensive Renewing Mist tracker for Mistweaver Monks in WoW Classic MoP.
 ### Advanced Tracking
 - [ ] **Enveloping Mist Tracker**: Show active Enveloping Mists with duration
 - [ ] **Expel Harm Ready Indicator**: Highlight when self-damage warrants usage
-- [ ] **Spinning Crane Kick Optimization**: Show when 3+ injured targets are stacked
+- [x] **Spinning Crane Kick Optimization**: Show when 3+ injured targets are stacked
 - [ ] **Zen Sphere Tracker**: Monitor active Zen Spheres and suggest reapplication
 - [ ] **Mastery Bonus Calculator**: Real-time display of Gust of Mists value
 - [ ] **Ancient Teachings of the Monastery**: Track blackout kick bonus healing
@@ -107,9 +111,9 @@ A comprehensive Renewing Mist tracker for Mistweaver Monks in WoW Classic MoP.
 - [ ] **Diffuse Magic/Dampen Harm Tracker**: Monitor defensive cooldowns
 
 ### Performance & Optimization
-- [ ] **Update Throttling**: Reduce update frequency for better performance in 40-man raids
-- [ ] **Memory Usage Display**: Show addon memory footprint
-- [ ] **CPU Usage Optimization**: Profile and optimize expensive operations
+- [x] **Update Throttling**: Reduce update frequency for better performance in 40-man raids
+- [x] **Memory Usage Display**: Show addon memory footprint
+- [x] **CPU Usage Optimization**: Profile and optimize expensive operations
 - [ ] **Selective Tracking**: Enable/disable features based on content type
 
 ### Technical Improvements

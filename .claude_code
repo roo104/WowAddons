@@ -20,3 +20,4 @@ This is a World of Warcraft addon project for **WoW Classic: Mists of Pandaria (
 - Use proper event handling with RegisterEvent
 - Maintain compatibility with other addons
 - Efficient frame updates and event handling
+- When changing or adding new features, update the README.md file

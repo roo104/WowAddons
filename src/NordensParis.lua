@@ -6,13 +6,21 @@
 
 local ADDON_NAME = "NordensParis"
 
+-- Default position constants
+local DEFAULT_X = 10
+local DEFAULT_Y = -250
+
 -- Frame variables
 local frame = CreateFrame("Frame", "NordensParisFrame", UIParent)
 local renewingMistFrame = nil
 local statueFrame = nil
 local cooldownFrame = nil
+local sckFrame = nil
+local memoryText = nil
 local updateTimer = 0
 local UPDATE_INTERVAL = 0.25 -- Update every 0.25 seconds
+local memoryUpdateTimer = 0
+local MEMORY_UPDATE_INTERVAL = 2 -- Update memory display every 2 seconds
 
 -- Saved variables (per-character)
 NordensParisCharDB = NordensParisCharDB or {
@@ -20,8 +28,10 @@ NordensParisCharDB = NordensParisCharDB or {
     showRenewingMist = true,
     showStatue = true,
     showCooldowns = true,
-    x = 100,
-    y = -100,
+    showSCK = true,
+    showMemory = false,
+    x = DEFAULT_X,
+    y = DEFAULT_Y,
     cooldownX = nil,
     cooldownY = nil,
     activeCooldowns = {},
@@ -61,14 +71,30 @@ local function InitializeFrame()
         renewingMistFrame = NordensParis_RenewingMistTracker.CreateRenewingMistFrame(frame, NordensParisCharDB)
     end
 
+    -- Create cooldown tracker frame using external module
+    if NordensParis_ExternalCooldownTracker then
+        cooldownFrame = NordensParis_ExternalCooldownTracker.CreateCooldownTrackerFrame(frame, NordensParisCharDB)
+    end
+
     -- Create statue frame using external module
     if NordensParis_JadeSerpentTracker then
         statueFrame = NordensParis_JadeSerpentTracker.CreateStatueFrame(frame, NordensParisCharDB)
     end
 
-    -- Create cooldown tracker frame using external module
-    if NordensParis_ExternalCooldownTracker then
-        cooldownFrame = NordensParis_ExternalCooldownTracker.CreateCooldownTrackerFrame(frame, NordensParisCharDB)
+    -- Create SCK tracker frame using external module (anchors to statue frame, appears on top)
+    if NordensParis_SCKTracker then
+        sckFrame = NordensParis_SCKTracker.CreateSCKFrame(frame, NordensParisCharDB, statueFrame)
+    end
+
+    -- Create memory display text
+    memoryText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    memoryText:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", 5, 5)
+    memoryText:SetTextColor(0.7, 0.7, 0.7)
+    memoryText:SetJustifyH("LEFT")
+    if NordensParisCharDB.showMemory then
+        memoryText:Show()
+    else
+        memoryText:Hide()
     end
 
     -- Initialize PlanManager before ActivePlan
@@ -99,6 +125,11 @@ local function UpdateDisplay()
     if NordensParis_ExternalCooldownTracker then
         NordensParis_ExternalCooldownTracker.UpdateCooldownDisplay(NordensParisCharDB)
     end
+
+    -- Update SCK tracker using external module
+    if NordensParis_SCKTracker then
+        NordensParis_SCKTracker.UpdateSCKDisplay(NordensParisCharDB)
+    end
 end
 
 -- Event handler
@@ -127,6 +158,17 @@ local function OnUpdate(self, elapsed)
     if updateTimer >= UPDATE_INTERVAL then
         updateTimer = 0
         UpdateDisplay()
+    end
+
+    -- Update memory display less frequently
+    memoryUpdateTimer = memoryUpdateTimer + elapsed
+    if memoryUpdateTimer >= MEMORY_UPDATE_INTERVAL then
+        memoryUpdateTimer = 0
+        if NordensParisCharDB.showMemory and memoryText and NordensParis_Utils then
+            local memory = NordensParis_Utils.GetMemoryUsage()
+            local formattedMemory = NordensParis_Utils.FormatMemory(memory)
+            memoryText:SetText("Memory: " .. formattedMemory)
+        end
     end
 end
 
@@ -196,9 +238,39 @@ SlashCmdList["NORDENSPARIS"] = function(msg)
                 print("|cff00ff80Nordens Paris:|r Cooldown tracker hidden")
             end
         end
+    elseif cmd == "sck" or cmd == "crane" then
+        NordensParisCharDB.showSCK = not NordensParisCharDB.showSCK
+        if sckFrame then
+            if NordensParisCharDB.showSCK then
+                -- Frame will show automatically during combat
+                print("|cff00ff80Nordens Paris:|r Spinning Crane Kick tracker enabled (visible in combat)")
+            else
+                sckFrame:Hide()
+                print("|cff00ff80Nordens Paris:|r Spinning Crane Kick tracker hidden")
+            end
+        else
+            print("|cff00ff80Nordens Paris:|r SCK tracker not available for this class")
+        end
+    elseif cmd == "memory" or cmd == "mem" then
+        NordensParisCharDB.showMemory = not NordensParisCharDB.showMemory
+        if memoryText then
+            if NordensParisCharDB.showMemory then
+                memoryText:Show()
+                -- Update immediately
+                if NordensParis_Utils then
+                    local memory = NordensParis_Utils.GetMemoryUsage()
+                    local formattedMemory = NordensParis_Utils.FormatMemory(memory)
+                    memoryText:SetText("Memory: " .. formattedMemory)
+                end
+                print("|cff00ff80Nordens Paris:|r Memory display shown")
+            else
+                memoryText:Hide()
+                print("|cff00ff80Nordens Paris:|r Memory display hidden")
+            end
+        end
     elseif cmd == "reset" then
-        NordensParisCharDB.x = 100
-        NordensParisCharDB.y = -100
+        NordensParisCharDB.x = DEFAULT_X
+        NordensParisCharDB.y = DEFAULT_Y
         frame:ClearAllPoints()
         frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", NordensParisCharDB.x, NordensParisCharDB.y)
         print("|cff00ff80Nordens Paris:|r Position reset")
@@ -304,6 +376,8 @@ SlashCmdList["NORDENSPARIS"] = function(msg)
         print("  /np mist (or renewing) - Toggle Renewing Mist tracker")
         print("  /np statue - Toggle statue tracker")
         print("  /np cooldowns (or cds) - Toggle cooldown tracker")
+        print("  /np sck (or crane) - Toggle Spinning Crane Kick tracker")
+        print("  /np memory (or mem) - Toggle memory usage display")
         print("  /np reset - Reset position")
         print("  ")
         print("|cff00ff80Plan Management:|r")
