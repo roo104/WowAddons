@@ -224,6 +224,8 @@ local function CreateCooldownBar(index)
     nameText:SetPoint("LEFT", 22, 0)
     nameText:SetJustifyH("LEFT")
     nameText:SetTextColor(1, 1, 1)
+    nameText:SetWidth(110)  -- Limit width to prevent overlap with timer
+    nameText:SetWordWrap(false)
     bar.nameText = nameText
 
     -- Timer text
@@ -268,6 +270,8 @@ local function CreateDpsBuffBar(index, yOffset)
     nameText:SetPoint("LEFT", 22, 0)
     nameText:SetJustifyH("LEFT")
     nameText:SetTextColor(1, 1, 1)
+    nameText:SetWidth(110)  -- Limit width to prevent overlap with timer
+    nameText:SetWordWrap(false)
     bar.nameText = nameText
 
     -- Timer text
@@ -312,6 +316,8 @@ local function CreateManaBuffBar(index, yOffset)
     nameText:SetPoint("LEFT", 22, 0)
     nameText:SetJustifyH("LEFT")
     nameText:SetTextColor(1, 1, 1)
+    nameText:SetWidth(110)  -- Limit width to prevent overlap with timer
+    nameText:SetWordWrap(false)
     bar.nameText = nameText
 
     -- Timer text
@@ -356,6 +362,8 @@ local function CreateCombatResBar(index, yOffset)
     nameText:SetPoint("LEFT", 22, 0)
     nameText:SetJustifyH("LEFT")
     nameText:SetTextColor(1, 1, 1)
+    nameText:SetWidth(110)  -- Limit width to prevent overlap with timer
+    nameText:SetWordWrap(false)
     bar.nameText = nameText
 
     -- Timer text
@@ -766,9 +774,6 @@ local function UpdateCooldownDisplay(db)
             -- Update name text with caster
             local classColor = GetClassColor(cd.class)
             local displayText = cd.casterName .. ": " .. cd.spellName
-            if cd.isBuffPhase then
-                displayText = displayText .. " (ACTIVE)"
-            end
             bar.nameText:SetText(displayText)
             bar.nameText:SetTextColor(classColor[1], classColor[2], classColor[3])
 
@@ -860,9 +865,6 @@ local function UpdateCooldownDisplay(db)
             -- Update name text with caster
             local classColor = GetClassColor(buff.class)
             local displayText = buff.casterName .. ": " .. buff.spellName
-            if buff.isBuffPhase then
-                displayText = displayText .. " (ACTIVE)"
-            end
             bar.nameText:SetText(displayText)
             bar.nameText:SetTextColor(classColor[1], classColor[2], classColor[3])
 
@@ -955,9 +957,6 @@ local function UpdateCooldownDisplay(db)
             -- Update name text with caster
             local classColor = GetClassColor(buff.class)
             local displayText = buff.casterName .. ": " .. buff.spellName
-            if buff.isBuffPhase then
-                displayText = displayText .. " (ACTIVE)"
-            end
             bar.nameText:SetText(displayText)
             bar.nameText:SetTextColor(classColor[1], classColor[2], classColor[3])
 
