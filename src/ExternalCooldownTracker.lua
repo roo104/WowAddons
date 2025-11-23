@@ -91,26 +91,24 @@ for _, resInfo in ipairs(TRACKED_COMBAT_RES) do
     end
 end
 
--- Build lookup tables for all tracked buffs
-local HEALER_BUFF_LOOKUP = {}
-local DPS_BUFF_LOOKUP = {}
-local MANA_BUFF_LOOKUP = {}
+-- Build unified lookup table for all tracked buffs
+local BUFF_LOOKUP = {}
 
 for _, cooldownInfo in ipairs(TRACKED_COOLDOWNS) do
     if cooldownInfo.trackType == "buff" then
-        HEALER_BUFF_LOOKUP[cooldownInfo.spellId] = cooldownInfo
+        BUFF_LOOKUP[cooldownInfo.spellId] = {info = cooldownInfo, category = "healer"}
     end
 end
 
 for _, buffInfo in ipairs(TRACKED_DPS_BUFFS) do
     if buffInfo.trackType == "buff" then
-        DPS_BUFF_LOOKUP[buffInfo.spellId] = buffInfo
+        BUFF_LOOKUP[buffInfo.spellId] = {info = buffInfo, category = "dps"}
     end
 end
 
 for _, buffInfo in ipairs(TRACKED_MANA_BUFFS) do
     if buffInfo.trackType == "buff" then
-        MANA_BUFF_LOOKUP[buffInfo.spellId] = buffInfo
+        BUFF_LOOKUP[buffInfo.spellId] = {info = buffInfo, category = "mana"}
     end
 end
 
@@ -456,79 +454,51 @@ local function OnUnitAura(unit)
     if not unit or not UnitExists(unit) then return end
 
     local currentTime = GetTime()
+    local isInGroup = IsInRaid() or IsInGroup()
 
     -- Single loop through unit's buffs, check against all tracked spells
     for buffIndex = 1, 40 do
         local name, _, _, _, _, expirationTime, caster, _, _, buffSpellId = UnitBuff(unit, buffIndex)
         if not name then break end
 
-        -- Check if this buff matches any healer cooldown
-        local healerInfo = HEALER_BUFF_LOOKUP[buffSpellId]
-        if healerInfo then
-            local casterName = caster and UnitName(caster) or "Unknown"
-            local _, casterClass = UnitClass(caster)
-            local key = casterName .. "-" .. buffSpellId
+        -- Check if this buff matches any tracked spell
+        local buffData = BUFF_LOOKUP[buffSpellId]
+        if buffData then
+            local buffInfo = buffData.info
+            local category = buffData.category
 
-            if not activeCooldowns[key] then
-                activeCooldowns[key] = {
+            -- Skip non-healer buffs if not in group
+            if isInGroup or category == "healer" then
+                local casterName = caster and UnitName(caster) or "Unknown"
+                local _, casterClass = UnitClass(caster)
+                local key = casterName .. "-" .. buffSpellId
+
+                local spellRecord = {
                     spellId = buffSpellId,
-                    spellName = healerInfo.name,
+                    spellName = buffInfo.name,
                     casterName = casterName,
-                    class = casterClass or healerInfo.class,
+                    class = casterClass or buffInfo.class,
                     startTime = currentTime,
                     endTime = expirationTime,
-                    duration = healerInfo.duration > 0 and healerInfo.duration or (expirationTime - currentTime),
-                    cooldownDuration = healerInfo.cooldownDuration,
+                    duration = buffInfo.duration > 0 and buffInfo.duration or (expirationTime - currentTime),
+                    cooldownDuration = buffInfo.cooldownDuration,
                     buffEndTime = expirationTime,
                     isBuffPhase = true
                 }
-            end
-        end
 
-        -- Check if this buff matches any DPS buff
-        if IsInRaid() or IsInGroup() then
-            local dpsInfo = DPS_BUFF_LOOKUP[buffSpellId]
-            if dpsInfo then
-                local casterName = caster and UnitName(caster) or "Unknown"
-                local _, casterClass = UnitClass(caster)
-                local key = casterName .. "-" .. buffSpellId
-
-                if not activeDpsBuffs[key] then
-                    activeDpsBuffs[key] = {
-                        spellId = buffSpellId,
-                        spellName = dpsInfo.name,
-                        casterName = casterName,
-                        class = casterClass or dpsInfo.class,
-                        startTime = currentTime,
-                        endTime = expirationTime,
-                        duration = dpsInfo.duration > 0 and dpsInfo.duration or (expirationTime - currentTime),
-                        cooldownDuration = dpsInfo.cooldownDuration,
-                        buffEndTime = expirationTime,
-                        isBuffPhase = true
-                    }
-                end
-            end
-
-            -- Check if this buff matches any Mana buff
-            local manaInfo = MANA_BUFF_LOOKUP[buffSpellId]
-            if manaInfo then
-                local casterName = caster and UnitName(caster) or "Unknown"
-                local _, casterClass = UnitClass(caster)
-                local key = casterName .. "-" .. buffSpellId
-
-                if not activeManaBuffs[key] then
-                    activeManaBuffs[key] = {
-                        spellId = buffSpellId,
-                        spellName = manaInfo.name,
-                        casterName = casterName,
-                        class = casterClass or manaInfo.class,
-                        startTime = currentTime,
-                        endTime = expirationTime,
-                        duration = manaInfo.duration > 0 and manaInfo.duration or (expirationTime - currentTime),
-                        cooldownDuration = manaInfo.cooldownDuration,
-                        buffEndTime = expirationTime,
-                        isBuffPhase = true
-                    }
+                -- Route to appropriate table based on category
+                if category == "healer" then
+                    if not activeCooldowns[key] then
+                        activeCooldowns[key] = spellRecord
+                    end
+                elseif category == "dps" then
+                    if not activeDpsBuffs[key] then
+                        activeDpsBuffs[key] = spellRecord
+                    end
+                elseif category == "mana" then
+                    if not activeManaBuffs[key] then
+                        activeManaBuffs[key] = spellRecord
+                    end
                 end
             end
         end
