@@ -545,10 +545,34 @@ local function CreateCooldownTrackerFrame(parentFrame, db)
 
     -- Title for Healer Cooldowns
     local titleText = cooldownFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    titleText:SetPoint("TOP", 0, -5)
+    titleText:SetPoint("TOP", -25, -5)
     titleText:SetText("Healer Cooldowns")
     titleText:SetTextColor(0.5, 0.8, 1)
     cooldownFrame.healerTitle = titleText
+
+    -- Reset button
+    local resetButton = CreateFrame("Button", "NordensParisCooldownResetButton", cooldownFrame, "UIPanelButtonTemplate")
+    resetButton:SetSize(50, 20)
+    resetButton:SetPoint("TOPRIGHT", -5, -5)
+    resetButton:SetText("Reset")
+    resetButton:SetScript("OnClick", function()
+        -- Clear all active cooldowns
+        for k in pairs(activeCooldowns) do
+            activeCooldowns[k] = nil
+        end
+        for k in pairs(activeDpsBuffs) do
+            activeDpsBuffs[k] = nil
+        end
+        for k in pairs(activeManaBuffs) do
+            activeManaBuffs[k] = nil
+        end
+        for k in pairs(activeCombatRes) do
+            activeCombatRes[k] = nil
+        end
+        -- Hide the frame since there are no cooldowns
+        cooldownFrame:Hide()
+    end)
+    cooldownFrame.resetButton = resetButton
 
     -- Create cooldown bars
     for i = 1, 10 do
