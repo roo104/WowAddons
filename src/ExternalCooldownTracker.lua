@@ -67,50 +67,26 @@ local TRACKED_COMBAT_RES = {
     {spellId = 21169, name = "Reincarnation", duration = 0, cooldownDuration = 1800, class = "SHAMAN", trackType = "cast"}
 }
 
--- Spell ID lookup for cast tracking
+-- Build lookup tables in a single pass
 local CAST_TRACKED_SPELLS = {}
-for _, cooldownInfo in ipairs(TRACKED_COOLDOWNS) do
-    if cooldownInfo.trackType == "cast" then
-        CAST_TRACKED_SPELLS[cooldownInfo.spellId] = {info = cooldownInfo, category = "healer"}
-    end
-end
-
--- Add mana buffs to cast tracking
-local CAST_TRACKED_MANA_SPELLS = {}
-for _, buffInfo in ipairs(TRACKED_MANA_BUFFS) do
-    if buffInfo.trackType == "cast" then
-        CAST_TRACKED_MANA_SPELLS[buffInfo.spellId] = buffInfo
-        CAST_TRACKED_SPELLS[buffInfo.spellId] = {info = buffInfo, category = "mana"}
-    end
-end
-
--- Add combat res to cast tracking
-for _, resInfo in ipairs(TRACKED_COMBAT_RES) do
-    if resInfo.trackType == "cast" then
-        CAST_TRACKED_SPELLS[resInfo.spellId] = {info = resInfo, category = "combatres"}
-    end
-end
-
--- Build unified lookup table for all tracked buffs
 local BUFF_LOOKUP = {}
 
-for _, cooldownInfo in ipairs(TRACKED_COOLDOWNS) do
-    if cooldownInfo.trackType == "buff" then
-        BUFF_LOOKUP[cooldownInfo.spellId] = {info = cooldownInfo, category = "healer"}
+-- Helper function to add to appropriate lookup tables
+local function BuildLookupTables(spellList, category)
+    for _, spellInfo in ipairs(spellList) do
+        if spellInfo.trackType == "cast" then
+            CAST_TRACKED_SPELLS[spellInfo.spellId] = {info = spellInfo, category = category}
+        elseif spellInfo.trackType == "buff" then
+            BUFF_LOOKUP[spellInfo.spellId] = {info = spellInfo, category = category}
+        end
     end
 end
 
-for _, buffInfo in ipairs(TRACKED_DPS_BUFFS) do
-    if buffInfo.trackType == "buff" then
-        BUFF_LOOKUP[buffInfo.spellId] = {info = buffInfo, category = "dps"}
-    end
-end
-
-for _, buffInfo in ipairs(TRACKED_MANA_BUFFS) do
-    if buffInfo.trackType == "buff" then
-        BUFF_LOOKUP[buffInfo.spellId] = {info = buffInfo, category = "mana"}
-    end
-end
+-- Build all lookup tables
+BuildLookupTables(TRACKED_COOLDOWNS, "healer")
+BuildLookupTables(TRACKED_DPS_BUFFS, "dps")
+BuildLookupTables(TRACKED_MANA_BUFFS, "mana")
+BuildLookupTables(TRACKED_COMBAT_RES, "combatres")
 
 -- Frame variables
 local cooldownFrame = nil
@@ -126,6 +102,54 @@ local combatLogFrame = nil
 local unitAuraFrame = nil
 local needsFullScan = true  -- Flag to trigger full scan on roster changes
 
+-- GUID to unit token cache for performance
+local guidToUnitCache = {}
+local lastUpdateTime = 0
+local UPDATE_THROTTLE = 0.05  -- Update display at most every 50ms
+
+-- Class color constants (extracted to avoid recreation)
+local CLASS_COLORS = {
+    DRUID = {1, 0.49, 0.04},
+    PALADIN = {0.96, 0.55, 0.73},
+    PRIEST = {1, 1, 1},
+    SHAMAN = {0, 0.44, 0.87},
+    MONK = {0, 1, 0.59},
+    WARRIOR = {0.78, 0.61, 0.43},
+    WARLOCK = {0.58, 0.51, 0.79},
+    HUNTER = {0.67, 0.83, 0.45},
+    MAGE = {0.41, 0.8, 0.94},
+    DEATHKNIGHT = {0.77, 0.12, 0.23},
+}
+
+-- Rebuild GUID to unit cache
+local function RebuildGuidCache()
+    guidToUnitCache = {}
+
+    if IsInRaid() then
+        for i = 1, GetNumGroupMembers() do
+            local unit = "raid" .. i
+            local guid = UnitGUID(unit)
+            if guid then
+                guidToUnitCache[guid] = unit
+            end
+        end
+    elseif IsInGroup() then
+        for i = 1, GetNumSubgroupMembers() do
+            local unit = "party" .. i
+            local guid = UnitGUID(unit)
+            if guid then
+                guidToUnitCache[guid] = unit
+            end
+        end
+    end
+
+    -- Always include player
+    local playerGuid = UnitGUID("player")
+    if playerGuid then
+        guidToUnitCache[playerGuid] = "player"
+    end
+end
+
 -- Handle combat log events for cast-based tracking (like Revival)
 local function OnCombatLogEvent(timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellId, spellName, spellSchool)
     -- Only track SPELL_CAST_SUCCESS events
@@ -140,32 +164,9 @@ local function OnCombatLogEvent(timestamp, eventType, hideCaster, sourceGUID, so
     end
     local cooldownInfo = spellData.info
 
-    -- Only track if the caster is in our group or is the player
-    local isPlayer = (sourceGUID == UnitGUID("player"))
-    local isInGroup = false
-
-    if IsInRaid() then
-        for i = 1, GetNumGroupMembers() do
-            if sourceGUID == UnitGUID("raid" .. i) then
-                isInGroup = true
-                break
-            end
-        end
-    elseif IsInGroup() then
-        if sourceGUID == UnitGUID("player") then
-            isInGroup = true
-        else
-            for i = 1, GetNumSubgroupMembers() do
-                if sourceGUID == UnitGUID("party" .. i) then
-                    isInGroup = true
-                    break
-                end
-            end
-        end
-    end
-
-    -- When solo, we should still track player spells
-    if not isPlayer and not isInGroup then
+    -- Use GUID cache to check if caster is tracked
+    local unit = guidToUnitCache[sourceGUID]
+    if not unit then
         return
     end
 
@@ -175,27 +176,7 @@ local function OnCombatLogEvent(timestamp, eventType, hideCaster, sourceGUID, so
 
     if not activeCooldowns[key] then
         -- Get caster's class
-        local _, class
-        if isPlayer then
-            _, class = UnitClass("player")
-        else
-            -- Try to find the unit to get their class
-            if IsInRaid() then
-                for i = 1, GetNumGroupMembers() do
-                    if sourceGUID == UnitGUID("raid" .. i) then
-                        _, class = UnitClass("raid" .. i)
-                        break
-                    end
-                end
-            elseif IsInGroup() then
-                for i = 1, GetNumSubgroupMembers() do
-                    if sourceGUID == UnitGUID("party" .. i) then
-                        _, class = UnitClass("party" .. i)
-                        break
-                    end
-                end
-            end
-        end
+        local _, class = UnitClass(unit)
 
         -- Use the actual cooldown duration from the spell info
         local duration = cooldownInfo.duration
@@ -609,6 +590,7 @@ local function CreateCooldownTrackerFrame(parentFrame, db)
                 OnUnitAura(unit)
             elseif event == "GROUP_ROSTER_UPDATE" then
                 needsFullScan = true
+                RebuildGuidCache()
             end
         end)
     end
@@ -674,6 +656,9 @@ local function CreateCooldownTrackerFrame(parentFrame, db)
         end)
     end
 
+    -- Initialize GUID cache
+    RebuildGuidCache()
+
     if db.showCooldowns then
         cooldownFrame:Show()
     else
@@ -683,22 +668,16 @@ local function CreateCooldownTrackerFrame(parentFrame, db)
     return cooldownFrame
 end
 
--- Get class color
+-- Get class color (use pre-defined constants)
 local function GetClassColor(class)
-    local colors = {
-        DRUID = {1, 0.49, 0.04},
-        PALADIN = {0.96, 0.55, 0.73},
-        PRIEST = {1, 1, 1},
-        SHAMAN = {0, 0.44, 0.87},
-        MONK = {0, 1, 0.59},
-        WARRIOR = {0.78, 0.61, 0.43},
-        WARLOCK = {0.58, 0.51, 0.79},
-        HUNTER = {0.67, 0.83, 0.45},
-        MAGE = {0.41, 0.8, 0.94},
-        DEATHKNIGHT = {0.77, 0.12, 0.23},
-    }
-    return colors[class] or {0.5, 0.5, 0.5}
+    return CLASS_COLORS[class] or {0.5, 0.5, 0.5}
 end
+
+-- Pre-allocated sort tables to avoid garbage
+local sortedCooldowns = {}
+local sortedBuffs = {}
+local sortedManaBuffs = {}
+local sortedCombatRes = {}
 
 -- Update cooldown display
 local function UpdateCooldownDisplay(db)
@@ -706,47 +685,60 @@ local function UpdateCooldownDisplay(db)
         return
     end
 
+    -- Throttle updates
+    local currentTime = GetTime()
+    if currentTime - lastUpdateTime < UPDATE_THROTTLE then
+        return
+    end
+    lastUpdateTime = currentTime
+
     -- Only clean up expired cooldowns, don't scan all units
     CleanupExpiredCooldowns()
 
-    -- Sort active healer cooldowns by time remaining
-    local sortedCooldowns = {}
+    -- Clear and populate sort tables
+    for i = #sortedCooldowns, 1, -1 do
+        sortedCooldowns[i] = nil
+    end
     for _, cd in pairs(activeCooldowns) do
         table.insert(sortedCooldowns, cd)
     end
 
-    table.sort(sortedCooldowns, function(a, b)
-        return (a.endTime - GetTime()) > (b.endTime - GetTime())
-    end)
-
-    -- Sort active DPS buffs by time remaining
-    local sortedBuffs = {}
+    for i = #sortedBuffs, 1, -1 do
+        sortedBuffs[i] = nil
+    end
     for _, buff in pairs(activeDpsBuffs) do
         table.insert(sortedBuffs, buff)
     end
 
-    table.sort(sortedBuffs, function(a, b)
-        return (a.endTime - GetTime()) > (b.endTime - GetTime())
-    end)
-
-    -- Sort active Mana buffs by time remaining
-    local sortedManaBuffs = {}
+    for i = #sortedManaBuffs, 1, -1 do
+        sortedManaBuffs[i] = nil
+    end
     for _, buff in pairs(activeManaBuffs) do
         table.insert(sortedManaBuffs, buff)
     end
 
-    table.sort(sortedManaBuffs, function(a, b)
-        return (a.endTime - GetTime()) > (b.endTime - GetTime())
-    end)
-
-    -- Sort active Combat Res by time remaining
-    local sortedCombatRes = {}
+    for i = #sortedCombatRes, 1, -1 do
+        sortedCombatRes[i] = nil
+    end
     for _, res in pairs(activeCombatRes) do
         table.insert(sortedCombatRes, res)
     end
 
+    -- Sort all tables by time remaining
+    table.sort(sortedCooldowns, function(a, b)
+        return (a.endTime - currentTime) > (b.endTime - currentTime)
+    end)
+
+    table.sort(sortedBuffs, function(a, b)
+        return (a.endTime - currentTime) > (b.endTime - currentTime)
+    end)
+
+    table.sort(sortedManaBuffs, function(a, b)
+        return (a.endTime - currentTime) > (b.endTime - currentTime)
+    end)
+
     table.sort(sortedCombatRes, function(a, b)
-        return (a.endTime - GetTime()) > (b.endTime - GetTime())
+        return (a.endTime - currentTime) > (b.endTime - currentTime)
     end)
 
     -- Hide entire frame if no cooldowns are active
@@ -757,8 +749,7 @@ local function UpdateCooldownDisplay(db)
 
     cooldownFrame:Show()
 
-    -- Update healer cooldown bars
-    local currentTime = GetTime()
+    -- Update healer cooldown bars (currentTime already cached above)
     local visibleHealerCds = 0
     for i = 1, 10 do
         local bar = cooldownBars[i]
@@ -850,9 +841,13 @@ local function UpdateCooldownDisplay(db)
         local bar = dpsBuffBars[i]
         local buff = sortedBuffs[i]
 
-        -- Update bar position
-        bar:ClearAllPoints()
-        bar:SetPoint("TOPLEFT", 10, dpsSectionOffset - 20 - (i - 1) * 25)
+        -- Update bar position (only set if changed to avoid unnecessary operations)
+        local newY = dpsSectionOffset - 20 - (i - 1) * 25
+        if not bar.lastY or bar.lastY ~= newY then
+            bar:ClearAllPoints()
+            bar:SetPoint("TOPLEFT", 10, newY)
+            bar.lastY = newY
+        end
 
         if buff then
             bar:Show()
@@ -941,9 +936,13 @@ local function UpdateCooldownDisplay(db)
         local bar = manaBuffBars[i]
         local buff = sortedManaBuffs[i]
 
-        -- Update bar position
-        bar:ClearAllPoints()
-        bar:SetPoint("TOPLEFT", 10, manaSectionOffset - 20 - (i - 1) * 25)
+        -- Update bar position (only set if changed)
+        local newY = manaSectionOffset - 20 - (i - 1) * 25
+        if not bar.lastY or bar.lastY ~= newY then
+            bar:ClearAllPoints()
+            bar:SetPoint("TOPLEFT", 10, newY)
+            bar.lastY = newY
+        end
 
         if buff then
             bar:Show()
@@ -1002,36 +1001,16 @@ local function UpdateCooldownDisplay(db)
         end
     end
 
-    -- Calculate Combat Res section offset
-    local combatResSectionOffset
+    -- Calculate Combat Res section offset (simplified calculation)
+    local combatResSectionOffset = -30  -- Base title offset
     if visibleHealerCds > 0 then
-        if visibleDpsBuffs > 0 then
-            if visibleManaBuffs > 0 then
-                combatResSectionOffset = -30 - (visibleHealerCds * 25) - 30 - (visibleDpsBuffs * 25) - 30 - (visibleManaBuffs * 25) - 30
-            else
-                combatResSectionOffset = -30 - (visibleHealerCds * 25) - 30 - (visibleDpsBuffs * 25) - 30
-            end
-        else
-            if visibleManaBuffs > 0 then
-                combatResSectionOffset = -30 - (visibleHealerCds * 25) - 30 - (visibleManaBuffs * 25) - 30
-            else
-                combatResSectionOffset = -30 - (visibleHealerCds * 25) - 30
-            end
-        end
-    else
-        if visibleDpsBuffs > 0 then
-            if visibleManaBuffs > 0 then
-                combatResSectionOffset = -30 - (visibleDpsBuffs * 25) - 30 - (visibleManaBuffs * 25) - 30
-            else
-                combatResSectionOffset = -30 - (visibleDpsBuffs * 25) - 30
-            end
-        else
-            if visibleManaBuffs > 0 then
-                combatResSectionOffset = -30 - (visibleManaBuffs * 25) - 30
-            else
-                combatResSectionOffset = -30
-            end
-        end
+        combatResSectionOffset = combatResSectionOffset - (visibleHealerCds * 25) - 30
+    end
+    if visibleDpsBuffs > 0 then
+        combatResSectionOffset = combatResSectionOffset - (visibleDpsBuffs * 25) - 30
+    end
+    if visibleManaBuffs > 0 then
+        combatResSectionOffset = combatResSectionOffset - (visibleManaBuffs * 25) - 30
     end
 
     -- Show/hide Combat Res title based on whether we have combat res
@@ -1048,9 +1027,13 @@ local function UpdateCooldownDisplay(db)
         local bar = combatResBars[i]
         local res = sortedCombatRes[i]
 
-        -- Update bar position
-        bar:ClearAllPoints()
-        bar:SetPoint("TOPLEFT", 10, combatResSectionOffset - 20 - (i - 1) * 25)
+        -- Update bar position (only set if changed)
+        local newY = combatResSectionOffset - 20 - (i - 1) * 25
+        if not bar.lastY or bar.lastY ~= newY then
+            bar:ClearAllPoints()
+            bar:SetPoint("TOPLEFT", 10, newY)
+            bar.lastY = newY
+        end
 
         if res then
             bar:Show()
