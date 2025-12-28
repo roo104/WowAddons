@@ -459,7 +459,7 @@ local function OnUnitAura(unit)
             -- Skip non-healer buffs if not in group
             if isInGroup or category == "healer" then
                 local casterName = caster and UnitName(caster) or "Unknown"
-                local _, casterClass = UnitClass(caster)
+                local _, casterClass = caster and UnitClass(caster) or nil
                 local key = casterName .. "-" .. buffSpellId
 
                 local spellRecord = {

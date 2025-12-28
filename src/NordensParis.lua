@@ -85,6 +85,11 @@ local function InitializeFrame()
         NordensParis_ActivePlan.Initialize(NordensParisCharDB)
         NordensParis_ActivePlan.Activate(NordensParisCharDB.activePlan, true)  -- Pass true to indicate restoration
     end
+
+    -- Initialize loot roll tracker
+    if NordensParis_LootRollTracker then
+        NordensParis_LootRollTracker.Initialize()
+    end
 end
 
 -- Update the display
@@ -301,6 +306,17 @@ SlashCmdList["NORDENSPARIS"] = function(msg)
         else
             print("|cff00ff80Nordens Paris:|r Plan manager not available")
         end
+    elseif cmd == "loot" or cmd == "rolls" then
+        if NordensParis_LootRollTracker then
+            NordensParis_LootRollTracker.Toggle()
+            if NordensParis_LootRollTracker.IsVisible() then
+                print("|cff00ff80Nordens Paris:|r Loot roll tracker shown")
+            else
+                print("|cff00ff80Nordens Paris:|r Loot roll tracker hidden")
+            end
+        else
+            print("|cff00ff80Nordens Paris:|r Loot roll tracker not available")
+        end
     elseif cmd == "help" or cmd == "" then
         print("|cff00ff80Nordens Paris Commands:|r")
         print("  /np lock - Lock the frame")
@@ -308,7 +324,7 @@ SlashCmdList["NORDENSPARIS"] = function(msg)
         print("  /np mist (or renewing) - Toggle Renewing Mist tracker")
         print("  /np statue - Toggle statue tracker")
         print("  /np cooldowns (or cds) - Toggle cooldown tracker")
-        print("  /np sck (or crane) - Toggle Spinning Crane Kick tracker")
+        print("  /np loot (or rolls) - Toggle loot roll tracker")
         print("  /np reset - Reset position")
         print("  ")
         print("|cff00ff80Plan Management:|r")
