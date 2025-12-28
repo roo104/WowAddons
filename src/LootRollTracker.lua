@@ -226,7 +226,7 @@ local function OnStartLootRoll(rollID, rollTime)
 
         -- Parse chat for roll information
         -- Look for patterns like "PlayerName has selected Need for: [Item]"
-        local playerName, rollType = message:match("(.+) has selected (%a+) for")
+        local playerName, rollType = message:match("([^%s]+) has selected (%a+) for")
         if playerName and rollType and message:find(rollData.itemName, 1, true) then
             -- Remove realm name if present
             playerName = playerName:match("([^-]+)") or playerName
@@ -293,10 +293,10 @@ local function OnUpdate(self, elapsed)
             end
         end
 
-        -- Check if any completed rolls can be removed (after 5 second delay)
+        -- Check if any completed rolls can be removed (after 10 second delay)
         for rollID, completionTime in pairs(rollCompletionTimes) do
-            if currentTime > completionTime + 5 then
-                -- Remove roll after 5 second delay
+            if currentTime > completionTime + 15 then
+                -- Remove roll after 15 second delay
                 activeRolls[rollID] = nil
                 rollTimeouts[rollID] = nil
                 rollCompletionTimes[rollID] = nil
