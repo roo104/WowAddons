@@ -5,7 +5,8 @@
 
 -- Only load for Mistweaver monks
 local _, class = UnitClass("player")
-if class ~= "MONK" then return end
+local spec = GetSpecialization()
+if class ~= "MONK" or spec ~= 2 then return end
 
 local JADE_SERPENT_STATUE_SPELL_ID = 115313 -- Summon Jade Serpent Statue spell ID
 
