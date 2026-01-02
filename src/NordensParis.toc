@@ -4,6 +4,7 @@
 ## Author: Jonas
 ## Version: 1.1.0
 ## SavedVariablesPerCharacter: NordensParisCharDB
+## SavedVariables: NordensParis_LootRollTrackerDB
 
 # Core modules
 Utils.lua

@@ -7,6 +7,11 @@
 local _, class = UnitClass("player")
 if class ~= "MONK" then return end
 
+local function IsMistweaver()
+    local spec = GetSpecialization()
+    return spec == 2 -- 2 = Mistweaver in MoP
+end
+
 local RENEWING_MIST_SPELL_ID = 119611 -- Renewing Mist spell ID for MoP
 local UPLIFT_SPELL_ID = 116670 -- Uplift spell ID for MoP
 
@@ -148,6 +153,18 @@ local function UpdateDisplay(db)
     -- Don't update if frame isn't initialized yet
     if not upliftText then
         return
+    end
+
+    -- Hide frame if not Mistweaver spec
+    if not IsMistweaver() then
+        if frame then
+            frame:Hide()
+        end
+        return
+    else
+        if frame then
+            frame:Show()
+        end
     end
 
     -- Always refresh targets to get current time remaining values
