@@ -4,26 +4,60 @@ A comprehensive Renewing Mist tracker for Mistweaver Monks in WoW Classic MoP.
 
 ## Features
 
-- **Renewing Mist Tracking**: Real-time tracking of Renewing Mist on all party/raid members
-- **Uplift Counter**: Shows how many targets would be healed by Uplift with optimal timing alerts (3+ targets)
-- **Spinning Crane Kick Optimizer**: Visual indicator when 3+ injured targets are within 8 yards (optimal SCK usage)
-- **Jade Serpent Statue Monitor**: Duration tracking and status display for your Jade Serpent Statue
-- **External Cooldown Tracker**: Track major healing cooldowns from other healers
-- **Player List**: Detailed list showing all players with Renewing Mist and time remaining
-- **Color-Coded Display**: Visual indicators for buff coverage and urgency
+### Core Tracking (Mistweaver Only)
+- **Renewing Mist Tracking**: Real-time tracking of Renewing Mist on all party/raid members with progress bars
+  - Shows remaining duration for each player
+  - Color-coded by urgency (green > 10s, yellow 5-10s, orange 3-5s, red < 3s)
+  - Automatically adjusts frame height based on number of active targets
+- **Uplift Counter**: Shows how many targets would be healed by Uplift
+  - Visual highlight when 3+ targets are active (optimal Uplift timing)
+  - Flashing green background for emphasis
+- **Jade Serpent Statue Monitor**: Duration and status tracking for your Jade Serpent Statue
+  - Shows time remaining with color-coded urgency
+  - "Not Summoned" indicator when inactive
+  - Dimmed display when statue is down
+
+### Group Utilities
+- **Spinning Crane Kick Optimizer**: Smart detector for optimal SCK usage
+  - Visual indicator when 3+ injured targets are within 8 yards
+  - Shows exact count of targets in range
+  - Health threshold detection (only counts injured players)
+- **External Cooldown Tracker**: Monitor major healing cooldowns from other healers
+  - Tracks: Tranquility, Divine Hymn, Revival, Spirit Link Totem, Healing Tide Totem, Ancestral Guidance, Aura Mastery
+  - Shows player name, cooldown name, and remaining duration
+  - Automatically detects and tracks cooldowns used by raid members
+  - Reset button to clear tracked cooldowns
+- **Loot Roll Tracker**: Monitor item rolls and player selections
+  - Tracks Need, Greed, Pass, and Disenchant rolls
+  - Shows item link, roll type, and roll value
+  - Tracks which players have made selections
+  - Auto-cleanup after roll completes
+  - Scroll support for viewing many rolls
+  - Persistent position saving
+
+### UI & Performance
+- **Draggable Frame**: Unlock to reposition, lock to prevent accidental movement
+- **Memory Usage Display**: Real-time addon memory footprint monitoring
+- **Color-Coded Display**: Visual indicators for buff coverage and urgency throughout
 - **Performance Optimized**: Smart caching and throttling for smooth performance in 40-man raids
 
 ## Commands
 
+### Frame Management
 - `/np lock` - Lock the frame position
 - `/np unlock` - Unlock the frame for repositioning
+- `/np reset` - Reset frame position to default
+
+### Feature Toggles
 - `/np mist` (or `renewing`) - Toggle Renewing Mist tracker
 - `/np statue` - Toggle Jade Serpent Statue tracker
-- `/np cooldowns` (or `cds`) - Toggle cooldown tracker
-- `/np sck` (or `crane`) - Toggle Spinning Crane Kick tracker
+- `/np cooldowns` (or `cds`) - Toggle external cooldown tracker
+- `/np sck` (or `crane`) - Toggle Spinning Crane Kick optimizer
+- `/np loot` (or `rolls`) - Toggle loot roll tracker
 - `/np memory` (or `mem`) - Toggle memory usage display
-- `/np reset` - Reset frame position to default
-- `/np help` - Show command list
+
+### Information
+- `/np help` - Show command list and current status
 
 ## Installation
 
