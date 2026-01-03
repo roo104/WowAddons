@@ -7,10 +7,7 @@
 local _, class = UnitClass("player")
 if class ~= "MONK" then return end
 
-local function IsMistweaver()
-    local spec = GetSpecialization()
-    return spec == 2 -- 2 = Mistweaver in MoP
-end
+local Utils = NordensParis_Utils
 
 local RENEWING_MIST_SPELL_ID = 119611 -- Renewing Mist spell ID for MoP
 local UPLIFT_SPELL_ID = 116670 -- Uplift spell ID for MoP
@@ -156,7 +153,7 @@ local function UpdateDisplay(db)
     end
 
     -- Hide frame if not Mistweaver spec
-    if not IsMistweaver() then
+    if not Utils.IsMistweaver() then
         if frame then
             frame:Hide()
         end

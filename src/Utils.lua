@@ -37,5 +37,11 @@ function Utils.GetGroupMembers()
     return members
 end
 
+-- Check if player is Mistweaver monk
+function Utils.IsMistweaver()
+    local spec = GetSpecialization()
+    return spec == 2 -- 2 = Mistweaver in MoP
+end
+
 -- Export the module
 NordensParis_Utils = Utils

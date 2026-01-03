@@ -3,10 +3,11 @@
 
 ---@diagnostic disable: undefined-global
 
--- Only load for Mistweaver monks
+-- Only load for monks (spec check happens later)
 local _, class = UnitClass("player")
-local spec = GetSpecialization()
-if class ~= "MONK" or spec ~= 2 then return end
+if class ~= "MONK" then return end
+
+local Utils = NordensParis_Utils
 
 local JADE_SERPENT_STATUE_SPELL_ID = 115313 -- Summon Jade Serpent Statue spell ID
 
@@ -18,6 +19,11 @@ local statueRangeText = nil
 
 -- Create a frame to show Jade Serpent Statue status
 local function CreateStatueFrame(parentFrame, db)
+    -- Check if player is Mistweaver
+    if not Utils.IsMistweaver() then
+        return nil
+    end
+
     statueFrame = CreateFrame("Frame", "NordensParisStatueFrame", parentFrame)
     statueFrame:SetSize(200, 50)
     statueFrame:SetPoint("BOTTOM", parentFrame, "TOP", 0, 5)
