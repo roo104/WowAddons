@@ -39,8 +39,20 @@ end
 
 -- Check if player is Mistweaver monk
 function Utils.IsMistweaver()
-    local spec = GetSpecialization()
-    return spec == 2 -- 2 = Mistweaver in MoP
+    local _, class = UnitClass("player")
+    if class ~= "MONK" then
+        return false
+    end
+
+    -- In Classic, check if GetSpecialization exists (retail API)
+    if GetSpecialization then
+        local spec = GetSpecialization()
+        return spec == 2 -- 2 = Mistweaver
+    end
+
+    -- For Classic without spec system, always return true for monks
+    -- (or you can add talent-based detection if needed)
+    return true
 end
 
 -- Export the module
