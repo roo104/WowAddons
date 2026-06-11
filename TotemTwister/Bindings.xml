@@ -1,0 +1,8 @@
+<Bindings>
+    <!-- Pressing the bound key clicks the secure button. Because a key binding
+         fires during a hardware event, :Click() is allowed to perform the
+         protected totem cast - and it keeps working in combat. -->
+    <Binding name="TOTEMTWISTER_TWIST" header="TOTEMTWISTER">
+        if TotemTwisterButton then TotemTwisterButton:Click() end
+    </Binding>
+</Bindings>

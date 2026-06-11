@@ -1,0 +1,11 @@
+## Interface: 20504
+## Title: TotemTwister
+## Notes: One-button Windfury/Grace of Air totem twisting helper for Shamans
+## Author: Jonas
+## Version: 1.0.0
+## SavedVariablesPerCharacter: TotemTwisterDB
+
+TwistButton.lua
+TwistHUD.lua
+TotemTwister.lua
+Bindings.xml
